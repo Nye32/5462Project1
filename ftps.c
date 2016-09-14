@@ -19,6 +19,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+// srbac Library
+#include "srbac.h"
+
 #define BUFSIZE 1000
 
 void main (int argc, char *argv[]) {
@@ -56,10 +59,13 @@ void main (int argc, char *argv[]) {
 		
 
 	// Bind Socket
+	BIND(sock, (struct sockaddr *)&sin_addr, sizeof(struct sockaddr_in));
+	/*
 	if (bind(sock, (struct sockaddr *)&sin_addr, sizeof(struct sockaddr_in)) < 0) {
 		perror("Error: Unable to Bind Stream Socket");
 		exit(1);
 	}
+	*/
 	
 	// Listen for socket connections (Max open connections is 5)
 	listen(sock, 5);
