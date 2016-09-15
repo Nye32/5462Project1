@@ -57,10 +57,10 @@ void createConnection(int * remoteSockfd, struct sockaddr_in * remoteSockaddr, i
 }                                                                                     
 
 
-void recieveAndSend( int * remoteSockfd, int * hostSockfd, char * buffer, int bufferLen)
+void receiveAndSend( int * remoteSockfd, int * hostSockfd, char * buffer, int bufferLen)
 {
 
-	if(REVC(*hostSockfd, buffer, bufferLen, 0) < 0)
+	if(RECV(*hostSockfd, buffer, bufferLen, 0) < 0)
 	{
 		fprintf(stderr, "%s\n", "failed to read pack, discarding");	
 	}
@@ -78,12 +78,20 @@ int main(int args, char * argv[])
 		fprintf(stderr,"%s %d %s\n" , "please give three aurguments,",args - 1,"were entered, the aurguments are remote-ip, remote-port, host-port");
 
 	}
-
+	
 	int hostSockfd;
 	int remoteSockfd;
 	struct sockaddr_in remoteSockaddr;		
 	struct sockaddr_in hostSockaddr;
 	createConnection(&remoteSockfd, &remoteSockaddr, &hostSockfd, &hostSockaddr, argv[2], argv[1], argv[3]);
+	
+	int bufferLen = 1000;
+	char * buffer = (char *)malloc(bufferLen);
+	receiveAndSend(&remoteSockfd, &hostSockfd, buffer, bufferLen);
 	fprintf(stdout, "%s %lu\n", "ended normally", sizeof(uint32_t));
 	fprintf(stdout, "%s\n", "localhost port open on 127.0.0.1");
 }
+
+
+
+
