@@ -93,7 +93,6 @@ int main (int argc, char *argv[]) {
 	// Read Header
 	rval = 24;
 	while (rval > 0) {
-		int32 = rval;
 		if(SEND(sock, requestsize, 4, 0) < 0)
 		{
 			fprintf(stderr,"%s\n", "failed to send request...exiting...");

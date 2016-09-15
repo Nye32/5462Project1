@@ -13,10 +13,11 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include "srbaclib.h"
-
+#include <sys/time.h>
 
 void * buffer;
 uint32_t counter = 0;
+fd_set read_fd;
 
 void createConnection(int * hostSockfd, struct sockaddr_in * hostSockaddr, int  * remoteSockfd,struct sockaddr_in *remoteSockaddr, struct sockaddr_in * ftpsaddr)
 {
@@ -78,8 +79,6 @@ void hostisset(int * hostSock, struct sockaddr_in * ftpsaddr)
 	if(*int32>counter)
 		*int32 = counter;
 	dest_addr = *(struct sockaddr *)ftpsaddr;
-	if(*int32 <= 0)
-	{
 		int sent = SEND(*hostSock, buffer, *int32, 0);
 		if(sent < 0)
 		{
@@ -88,16 +87,18 @@ void hostisset(int * hostSock, struct sockaddr_in * ftpsaddr)
 		}
 		memmove(buffer, buffer+sent, counter-sent);
 		counter -= sent;
-	}
 	free(temp);
+	fprintf(stderr,"%d\n",counter);
 	fprintf(stderr, "%s\n", "sent back");
 }
 
 void remoteisset(int * remoteSock)
 {
-	if(counter>=64000)
+	printf("%d\n",counter);
+	if(counter<=64000)
 	{
 		int read = RECV(*remoteSock,buffer+counter,64000-counter,0);
+		fprintf(stderr,"%d\n", read);
 		if(read < 0)
 		{
 			fprintf(stderr,"%s\n","couldn't recv from remote...exiting...");
@@ -112,12 +113,12 @@ void remoteisset(int * remoteSock)
 
 void checkRead(int * hostSockfd, int * remoteSockfd, struct sockaddr_in * ftpsaddr)
 {
-	fd_set read_fd;
 	FD_ZERO(&read_fd);
 	FD_SET(*hostSockfd, &read_fd);
 	FD_SET(*remoteSockfd, &read_fd);
-	
-	if(select(FD_SETSIZE, &read_fd,NULL,NULL,NULL) < 0)
+	struct timeval timeout;
+	timeout.tv_sec = 10;	
+	if(select(FD_SETSIZE, &read_fd,NULL,NULL,&timeout) < 0)
 	{
 		fprintf(stderr,"%s\n","select failed...exiting..." );
 		exit(0);
@@ -130,9 +131,6 @@ void checkRead(int * hostSockfd, int * remoteSockfd, struct sockaddr_in * ftpsad
 	{
 		remoteisset(remoteSockfd);
 	}
-	FD_ZERO(&read_fd);
-	FD_SET(*hostSockfd, &read_fd);
-	FD_SET(*remoteSockfd, &read_fd);
 }
 
 
