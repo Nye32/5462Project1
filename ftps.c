@@ -56,6 +56,7 @@ int main (int argc, char *argv[]) {
 	sin_addr.sin_family = AF_INET;
 	sin_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	sin_addr.sin_port = htons(port);
+	memset(&(sin_addr.sin_zero), '\0',8);
 		
 
 	// Bind Socket
@@ -98,7 +99,7 @@ int main (int argc, char *argv[]) {
 			fprintf(stderr,"%s\n", "failed to send request...exiting...");
 			exit(0);
 		}
-		printf("TCP Server Initialized. Awaiting Clients...\n");
+		fprintf(stderr,"%d\n", rval);
 		rval -= RECV(sock, databufin, rval, 0);
 		printf("TCP Server Initialized. Awaiting Clients...\n");
 	}

@@ -18,7 +18,7 @@ ssize_t SEND(int sockfd, const void *buffer, size_t len, int flags) {
 
 // RECV
 ssize_t RECV(int sockfd, void *buf, size_t len, int flags) {
-	return recvfrom(sockfd, buf, len, flags, &return_addr, &return_addrlen);
+	return recvfrom(sockfd, buf, len, flags, (struct sockaddr *)return_addr, return_addrlen);
 }
 
 // BIND

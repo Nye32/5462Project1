@@ -18,7 +18,7 @@
 void * buffer;
 uint32_t counter = 0;
 
-void createConnection(int * hostSockfd, struct sockaddr_in * hostSockaddr, int  * remoteSockfd,struct sockaddr_in *remoteSockaddr)
+void createConnection(int * hostSockfd, struct sockaddr_in * hostSockaddr, int  * remoteSockfd,struct sockaddr_in *remoteSockaddr, struct sockaddr_in * ftpsaddr)
 {
 	*hostSockfd = SOCKET(AF_INET, SOCK_DGRAM,IPPROTO_UDP);
 
@@ -55,12 +55,15 @@ void createConnection(int * hostSockfd, struct sockaddr_in * hostSockaddr, int  
 		fprintf(stderr,"%s\n","couldn't bind socket");
 		exit(0);
 	}                                                                                       	
-
+	ftpsaddr->sin_family = AF_INET;
+    ftpsaddr->sin_port = htons(atoi("2000"));
+    ftpsaddr->sin_addr.s_addr = inet_addr("127.0.0.1");	
+	memset(&(ftpsaddr->sin_zero),'\0',8);   
 	return;
 }                                                                                     
 
 
-void hostisset(int * hostSock)
+void hostisset(int * hostSock, struct sockaddr_in * ftpsaddr)
 {
 	void * temp = malloc(4);
 	fprintf(stderr, "%s\n", "got a call");
@@ -74,8 +77,7 @@ void hostisset(int * hostSock)
 	uint32_t * int32 = temp;
 	if(*int32>counter)
 		*int32 = counter;
-	dest_addr = *((struct sockaddr *)&return_addr);
-	perror("got it!");
+	dest_addr = *(struct sockaddr *)ftpsaddr;
 	if(*int32 <= 0)
 	{
 		int sent = SEND(*hostSock, buffer, *int32, 0);
@@ -108,7 +110,7 @@ void remoteisset(int * remoteSock)
 
 
 
-void checkRead(int * hostSockfd, int * remoteSockfd)
+void checkRead(int * hostSockfd, int * remoteSockfd, struct sockaddr_in * ftpsaddr)
 {
 	fd_set read_fd;
 	FD_ZERO(&read_fd);
@@ -122,12 +124,15 @@ void checkRead(int * hostSockfd, int * remoteSockfd)
 	}
 	if(FD_ISSET(*hostSockfd, &read_fd))
 	{		
-		hostisset(hostSockfd);
+		hostisset(hostSockfd,ftpsaddr);
 	}		
 	if(FD_ISSET(*remoteSockfd, &read_fd))
 	{
 		remoteisset(remoteSockfd);
 	}
+	FD_ZERO(&read_fd);
+	FD_SET(*hostSockfd, &read_fd);
+	FD_SET(*remoteSockfd, &read_fd);
 }
 
 
@@ -137,11 +142,12 @@ int main(int args, char * argv[])
 	int remoteSockfd;
 	struct sockaddr_in hostSockaddr;
 	struct sockaddr_in remoteSockaddr;
-	createConnection(&hostSockfd, &hostSockaddr, &remoteSockfd, &remoteSockaddr);
+	struct sockaddr_in ftpsaddr;
+	createConnection(&hostSockfd, &hostSockaddr, &remoteSockfd, &remoteSockaddr, &ftpsaddr);
 	buffer = malloc(64000);
 	for(;;)
 	{
-		checkRead(&hostSockfd, &remoteSockfd);
+		checkRead(&hostSockfd, &remoteSockfd, &ftpsaddr);
 	}
 	fprintf(stdout, "%s %lu\n", "ended normally", sizeof(uint32_t));
 	fprintf(stdout, "%s\n", "localhost port open on 127.0.0.1");
