@@ -8,7 +8,6 @@ ALL:FTPC FTPS TCPDC TCPDS
 FTPC:ftpc.c
 	$(CC) $(OPTIONS)  srbaclib.c ftpc.c -o ftpc
 
-
 FTPS:ftps.c
 	$(CC) $(OPTIONS)  srbaclib.c ftps.c -o ftps
 
