@@ -20,7 +20,7 @@
 #include <unistd.h>
 
 // srbac Library
-#include "srbac.h"
+#include "srbaclib.h"
 
 #define BUFSIZE 1000
 
@@ -71,10 +71,12 @@ void main (int argc, char *argv[]) {
 	listen(sock, 5);
 	
 	// Accept 1 connection: msgsocket
+	/*
 	if ((msgsock = ACCEPT(sock, (struct sockaddr *)NULL, (int *)NULL)) == -1) {
 		perror("Error: Unable to connect Stream Socket.");
 		exit(1);
 	}
+	*/
 	
 	// Clear Buffer (Set it to 0)
 	bzero(databufin, sizeof(databufin));
