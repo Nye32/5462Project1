@@ -23,7 +23,7 @@ ssize_t RECV(int sockfd, void *buf, size_t len, int flags) {
 // BIND
 int BIND(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 	dest_addr = *addr;
-	return bind(sockfd, (struct sockaddr *)&addr, sizeof(struct sockaddr));
+	return bind(sockfd, (struct sockaddr *)&addr, addrlen);
 }
 
 // ACCEPT

@@ -28,13 +28,11 @@ void main (int argc, char *argv[]) {
 	// Variables
 	int port;
 	int sock;
-	int msgsock;
 	int rval = 0;
 	int filesize = 0;
 	char filename[20] = "";
 	struct sockaddr_in sin_addr;
 	char databufin[BUFSIZE];
-	char databufout[BUFSIZE] = "Server Response: hi";
 	
 	// Ensure Proper Argument Usage
 	if (argc != 2) {
@@ -47,7 +45,7 @@ void main (int argc, char *argv[]) {
 	
 	// Wait for client connection
 	printf("TCP Server Initialized. Awaiting Clients...\n");
-	if ((sock = SOCKET(AF_INET, SOCK_STREAM, 0)) < 0) {
+	if ((sock = SOCKET(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		perror("Error: Unable to Open Datagram Socket.");
 		exit(1);
 	}
@@ -68,8 +66,7 @@ void main (int argc, char *argv[]) {
 	*/
 	
 	// Listen for socket connections (Max open connections is 5)
-	listen(sock, 5);
-	
+	//listen(sock, 5);
 	// Accept 1 connection: msgsocket
 	/*
 	if ((msgsock = ACCEPT(sock, (struct sockaddr *)NULL, (int *)NULL)) == -1) {
@@ -84,7 +81,7 @@ void main (int argc, char *argv[]) {
 	// Read Header
 	rval = 24;
 	while (rval > 0) {
-		rval -= RECV(msgsock, databufin, rval, 0);
+		rval -= RECV(sock, databufin, rval, 0);
 	}
 	
 	// Determine Size of file from header
@@ -126,7 +123,7 @@ void main (int argc, char *argv[]) {
 	rval = 0;
 	int tempval = 0;
 	while (rval < filesize) {
-		tempval = recv(msgsock, databufin, BUFSIZE, 0);
+		tempval = RECV(sock, databufin, BUFSIZE, 0);
 		rval += tempval;
 		if (tempval  < 0) {
 			perror("Error: Unable to read Stream Socket.");
@@ -140,6 +137,6 @@ void main (int argc, char *argv[]) {
 	
 	// Close File/Connections
 	fclose(oufp);
-	close(msgsock);
+	//close(msgsock);
 	close(sock);
 }

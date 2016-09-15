@@ -21,12 +21,15 @@ void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename)
 	uint32_t netfsize = htonl(fsize);
 	memcpy(buf, &netfsize,sizeof(uint32_t));
 	memcpy(buf+4,filename,strlen(filename));
-	SEND(*sockfd,buf,24,0);
+//	SEND(*sockfd,buf,24,0);
+	sendto(*sockfd, buf, 24,0,&dest_addr,sizeof(struct sockaddr_in));
 	int read = 0;	
 	while(feof(transFile) == 0)
 	{
 		read = fread(buf,1,1000,transFile);
-		int sent = SEND(*sockfd,buf,read,0);
+	//	int sent = SEND(*sockfd,buf,read,0);
+
+	 int sent=	sendto(*sockfd, buf, read,0,(struct sockaddr *)&dest_addr,sizeof(struct sockaddr_in));
 		if(sent != read)
 		{
 			fprintf(stdout, "sent %d Reason %s\n\n", sent, strerror(errno));
@@ -52,7 +55,7 @@ unsigned long fileSize(const char *filePath)
 
 void createConnection(int * sockfd, struct sockaddr_in * sockaddr, char *port, char * serverIp)
 {
-	*sockfd = SOCKET(AF_INET, SOCK_STREAM,0);
+	*sockfd = SOCKET(AF_INET, SOCK_DGRAM,0);
 	if(*sockfd < 0)
 	{
 		fprintf(stdout, "%s\n", "socket could not be made");
@@ -63,12 +66,13 @@ void createConnection(int * sockfd, struct sockaddr_in * sockaddr, char *port, c
 	sockaddr->sin_port = htons(atoi(port));
 	sockaddr->sin_addr.s_addr = inet_addr(serverIp);	
 	memset(&(sockaddr->sin_zero),'\0',8);
-	if(BIND(*sockfd,(struct sockaddr *)sockaddr,sizeof(struct sockaddr_in)) < 0)
+	/*if(BIND(*sockfd,(struct sockaddr *)sockaddr,sizeof(struct sockaddr_in)) < 0)
 	{
-		fprintf(stderr, "%s failed becuase %s\n", "failed to bind", strerror(errno));
+		fprintf(stderr, "%s %s\n", "failed to bind, failed because", strerror(errno));
 		close(*sockfd);
 		exit(0);
-	}
+	}*/
+	dest_addr = *((struct sockaddr *) sockaddr);
 	return;
 }
 
