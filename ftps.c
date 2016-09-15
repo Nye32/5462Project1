@@ -142,9 +142,9 @@ int main (int argc, char *argv[]) {
 	rval = 0;
 	int tempval = 0;
 	int32 = BUFSIZE;
-	memcpy(requestsize, &int32, 4);
+	memcpy(requestsize, &int32, sizeof(uint32_t));
 	while (rval < filesize) {	
-		if(SEND(sock, requestsize, 4, 0) < 0)
+		if(SEND(sock, requestsize, sizeof(uint32_t), 0) < 0)
 		{
 			fprintf(stderr,"%s\n", "failed to send request...exiting...");
 			exit(0);

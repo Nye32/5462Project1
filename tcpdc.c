@@ -72,8 +72,7 @@ void receiveAndSend( struct sockaddr_in * trolladdr, int * hostSockfd)
 	{
 		perror("worked");
 		dest_addr = *((struct sockaddr *)&pack.remote);
-		fprintf(stderr, "%c\n",((char* )pack.buffer)[0] );
-		if(SEND(*hostSockfd, pack.buffer, 1000/*sizeof(struct trollSock)*/, 0) < 0)
+		if(SEND(*hostSockfd, pack.buffer, read/*sizeof(struct trollSock)*/, 0) < 0)
 		{
 			fprintf(stderr, "%s\n", "couldn't send...quiting...");
 			exit(0);
