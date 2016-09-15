@@ -16,20 +16,20 @@
 void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename)
 {
 	fprintf(stderr, "size of file is %d\n", fsize);
-	char * buf = (char *) malloc(1000);
+	void * buf = (void *) malloc(1000);
 	bzero(buf,1000);
 	uint32_t netfsize = htonl(fsize);
 	memcpy(buf, &netfsize,sizeof(uint32_t));
 	memcpy(buf+4,filename,strlen(filename));
-//	SEND(*sockfd,buf,24,0);
-	sendto(*sockfd, buf, 24,0,&dest_addr,sizeof(struct sockaddr_in));
+	SEND(*sockfd,buf,24,0);
+	//sendto(*sockfd, buf, 24,0,&dest_addr,sizeof(struct sockaddr_in));
 	int read = 0;	
 	while(feof(transFile) == 0)
 	{
 		read = fread(buf,1,1000,transFile);
-	//	int sent = SEND(*sockfd,buf,read,0);
-
-	 int sent=	sendto(*sockfd, buf, read,0,(struct sockaddr *)&dest_addr,sizeof(struct sockaddr_in));
+		int sent = SEND(*sockfd,buf,read,0);
+		usleep(10 * 1000);
+	 //int sent=	sendto(*sockfd, buf, read,0,(struct sockaddr *)&dest_addr,sizeof(struct sockaddr_in));
 		if(sent != read)
 		{
 			fprintf(stdout, "sent %d Reason %s\n\n", sent, strerror(errno));
@@ -55,7 +55,7 @@ unsigned long fileSize(const char *filePath)
 
 void createConnection(int * sockfd, struct sockaddr_in * sockaddr, char *port, char * serverIp)
 {
-	*sockfd = SOCKET(AF_INET, SOCK_DGRAM,0);
+	*sockfd = SOCKET(AF_INET, SOCK_DGRAM,IPPROTO_UDP);
 	if(*sockfd < 0)
 	{
 		fprintf(stdout, "%s\n", "socket could not be made");
@@ -72,7 +72,7 @@ void createConnection(int * sockfd, struct sockaddr_in * sockaddr, char *port, c
 		close(*sockfd);
 		exit(0);
 	}*/
-	dest_addr = *((struct sockaddr *) sockaddr);
+	dest_addr = *((struct sockaddr *)sockaddr);
 	return;
 }
 

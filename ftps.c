@@ -18,13 +18,13 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
+#include <arpa/inet.h>
 // srbac Library
 #include "srbaclib.h"
 
 #define BUFSIZE 1000
 
-void main (int argc, char *argv[]) {
+int main (int argc, char *argv[]) {
 	// Variables
 	int port;
 	int sock;
@@ -33,31 +33,42 @@ void main (int argc, char *argv[]) {
 	char filename[20] = "";
 	struct sockaddr_in sin_addr;
 	char databufin[BUFSIZE];
-	
+	struct sockaddr_in request;
+	uint32_t int32 = 24;
+	void * requestsize = malloc(4);
 	// Ensure Proper Argument Usage
 	if (argc != 2) {
 		printf("ERROR: Incorrect number of arguements.");
 		printf(" Please run using the following format...\n");
-		printf("ftps <local-port>\n\n");
+		printf("ftps <local-port> <tcpd-port>\n\n");
 		exit(1);
 	}
 	port = atoi(argv[1]);
 	
 	// Wait for client connection
 	printf("TCP Server Initialized. Awaiting Clients...\n");
-	if ((sock = SOCKET(AF_INET, SOCK_DGRAM, 0)) < 0) {
+	if ((sock = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
 		perror("Error: Unable to Open Datagram Socket.");
 		exit(1);
 	}
 	
 	// Construct sent socket
 	sin_addr.sin_family = AF_INET;
-	sin_addr.sin_addr.s_addr = INADDR_ANY;
+	sin_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	sin_addr.sin_port = htons(port);
 		
 
 	// Bind Socket
 	BIND(sock, (struct sockaddr *)&sin_addr, sizeof(struct sockaddr_in));
+
+
+	request.sin_family = AF_INET;
+	request.sin_port = htons(atoi("5050"));
+	request.sin_addr.s_addr = inet_addr("127.0.0.1");
+	memset(&(request.sin_zero), '\0',8);
+	dest_addr = *((struct sockaddr *)&request);
+	memcpy(requestsize, &int32, 4);
+
 	/*
 	if (bind(sock, (struct sockaddr *)&sin_addr, sizeof(struct sockaddr_in)) < 0) {
 		perror("Error: Unable to Bind Stream Socket");
@@ -81,8 +92,17 @@ void main (int argc, char *argv[]) {
 	// Read Header
 	rval = 24;
 	while (rval > 0) {
+		int32 = rval;
+		if(SEND(sock, requestsize, 4, 0) < 0)
+		{
+			fprintf(stderr,"%s\n", "failed to send request...exiting...");
+			exit(0);
+		}
+		printf("TCP Server Initialized. Awaiting Clients...\n");
 		rval -= RECV(sock, databufin, rval, 0);
+		printf("TCP Server Initialized. Awaiting Clients...\n");
 	}
+
 	
 	// Determine Size of file from header
 	char temp[20];
@@ -97,8 +117,7 @@ void main (int argc, char *argv[]) {
 	for (i = 0; i < 20; i++) {
 		temp[i] = databufin[i+4];
 	}
-	strcpy(filename, temp);
-	printf("Filename: %s\n", filename);
+	printf("Filename: %s\n", temp);
 	filename[0] = 'r';
 	filename[1] = 'e';
 	filename[2] = 'c';
@@ -122,14 +141,22 @@ void main (int argc, char *argv[]) {
 	// Recieve and Write Data
 	rval = 0;
 	int tempval = 0;
-	while (rval < filesize) {
+	int32 = BUFSIZE;
+	memcpy(requestsize, &int32, 4);
+	while (rval < filesize) {	
+		if(SEND(sock, requestsize, 4, 0) < 0)
+		{
+			fprintf(stderr,"%s\n", "failed to send request...exiting...");
+			exit(0);
+		}
 		tempval = RECV(sock, databufin, BUFSIZE, 0);
+
 		rval += tempval;
 		if (tempval  < 0) {
 			perror("Error: Unable to read Stream Socket.");
 			exit(1);
 		}
-
+		
 		// Write to Output File
 		fwrite(databufin, 1, tempval, oufp);
 		//fprintf(oufp, "%s", databufin); //Troubleshooting

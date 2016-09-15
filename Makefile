@@ -2,7 +2,7 @@ CC = gcc
 
 OPTIONS = -std=gnu99
 
-ALL:FTPC FTPS TCPD
+ALL:FTPC FTPS TCPDC TCPDS
 
 
 FTPC:ftpc.c
@@ -12,9 +12,12 @@ FTPC:ftpc.c
 FTPS:ftps.c
 	$(CC) $(OPTIONS)  srbaclib.c ftps.c -o ftps
 
-TCPD:tcpd.c
-	$(CC) $(OPTIONS)  srbaclib.c tcpd.c -o tcpd
+TCPDC:tcpdc.c
+	$(CC) $(OPTIONS)  srbaclib.c tcpdc.c -o tcpdc
+
+TCPDS:tcpds.c
+	$(CC) $(OPTIONS)  srbaclib.c tcpds.c -o tcpds
 
 clean:
-	rm ftpc ftps
+	rm ftpc ftps tcpdc tcpds
 	rm -r recvd
