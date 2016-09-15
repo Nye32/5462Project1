@@ -47,7 +47,7 @@ void main (int argc, char *argv[]) {
 	
 	// Wait for client connection
 	printf("TCP Server Initialized. Awaiting Clients...\n");
-	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+	if ((sock = SOCKET(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("Error: Unable to Open Datagram Socket.");
 		exit(1);
 	}
@@ -71,7 +71,7 @@ void main (int argc, char *argv[]) {
 	listen(sock, 5);
 	
 	// Accept 1 connection: msgsocket
-	if ((msgsock = accept(sock, (struct sockaddr *)NULL, (int *)NULL)) == -1) {
+	if ((msgsock = ACCEPT(sock, (struct sockaddr *)NULL, (int *)NULL)) == -1) {
 		perror("Error: Unable to connect Stream Socket.");
 		exit(1);
 	}
@@ -82,7 +82,7 @@ void main (int argc, char *argv[]) {
 	// Read Header
 	rval = 24;
 	while (rval > 0) {
-		rval -= recv(msgsock, databufin, rval, 0);
+		rval -= RECV(msgsock, databufin, rval, 0);
 	}
 	
 	// Determine Size of file from header

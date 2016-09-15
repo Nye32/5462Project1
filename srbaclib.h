@@ -8,6 +8,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+// Global Variables
+extern struct sockaddr dest_addr;
+
 // SEND
 ssize_t SEND(int sockfd, const void *buffer, size_t len, int flags);
 
@@ -22,3 +25,6 @@ void ACCEPT(void);
 
 // CONNECT
 void CONNECT(void);
+
+// SOCKET
+int SOCKET(int family, int type, int protocol);

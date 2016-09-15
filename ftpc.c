@@ -18,7 +18,7 @@ void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename)
 	fprintf(stderr, "size of file is %d\n", fsize);
 	char * buf = (char *) malloc(1000);
 	bzero(buf,1000);
-	uint32_t netfsize = htonl(fsize);	
+	uint32_t netfsize = htonl(fsize);
 	memcpy(buf, &netfsize,sizeof(uint32_t));
 	memcpy(buf+4,filename,strlen(filename));
 	send(*sockfd,buf,24,0);
