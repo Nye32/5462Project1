@@ -9,9 +9,92 @@ ___________________
 PROGRAM DESCRIPTION
 ___________________
 
+Using Lab02 as a foundation, the goal of Lab 03 is to implement
+a TCP like networking protocol using UDP as the underlying
+transfer method. This is done by replacing all the TCP function
+calls (send, recv, socket, bind) with the UDP calls (sendto, 
+recvfrom, socket, and bind). Each of the files used are described
+below.
+
+====| ftps.c |===================================================
+
+Largely untouched from Lab02, ftps.c contains the server code
+for recieving the file to be transfered and writing it to a local
+folder "recvd". The main changes were, as described above,
+replacing the bind, socket, send, and recv with BIND, SOCKET,
+SEND, and RECV which are user defined functions described in
+srbaclib.c. Once started, ftps.c will request a certain number of
+bytes from tcpds.
+
+====| ftpc.c |===================================================
+
+Largely untouched from Lab02, ftpc.c contains the client code for
+sending a local file, across the network 
+	(tcpdc -> Troll -> tcpds -> ftps)
+where it will be written to a new file by ftps.c. Like ftps.c, 
+the main changes involved changing the bind, socket, send and recv
+with our user defined srbaclib.c functions BIND, SOCKET, SEND, and 
+RECV. Once started with the proper parameters, ftpc.c will attempt
+to send a file through the network to the given server socket.
+
+====| srbaclib.c |================================================
+
+New for Lab03 is our library file that contains the new methods
+that are responsible for the creation of sockets and sending of 
+packets. The following functions are described in srbaclib.c:
+	SEND - Converts the TCP send() to the UDP sendto()
+	RECV - Converts the TCP recv() to the UDP recvfrom()
+	BIND - Identical to bind() but assigns dest_addr
+	ACCEPT - No functionality for Lab03
+	CONNECT - No functionality for Lab03
+	SOCKET - Identical to socket()
+
+====| srbaclib.h |================================================
+
+Header file that contains the function definitions for srbaclib.c
+
+====| tcpds.c |===================================================
+
+Contains the methods for recieving data from the ftps.c server that
+includes 
+	1) The fact that the server is ready to recieve the file
+	2) The size of the buffer it is expecting
+It is responsible for recieving the packets from tcpdc.c and
+forwarding them to ftps.c where it will construct the recieved file.
+
+====| tcpdc.c |===================================================
+
+Contains the methods for sending packets from ftpc.c to the Troll
+which, acting like a network will forward them to the given address
+which is the tcpds.c.
+
+====| Makefile |==================================================
+
+Contains the command line arguements for compiling and cleaning the
+Lab03 files.
 
 
 ___________________
 Running Instruction
 ___________________
 
+To successfully execute a file transfer using Lab03, one must
+complete the following steps. Note: cM = Client Machine 
+									sM = Server Machine
+
+1) Comple the code by executing:
+	| $ make clean
+	| $ make
+
+2) Run tcpds and tcpdc by executing in multiple terminals/machines
+	| sM$ tcpds
+	| cM$ tcpdc <server-IP> <server-PORT>
+
+3) Run troll by executing on the client machine
+	| cM$ troll <local-PORT>
+
+4) Run ftps by executing the following on the server machine
+	| sM$ ftps <server-PORT>
+
+5) Run ftpc by executing the following on the client machine
+	| cM$ ftpc <server-IP> <server-PORT> <local-file-to-transfer>
