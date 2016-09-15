@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
-
+#include "srbaclib.h"
 
 void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename)
 {
@@ -21,12 +21,12 @@ void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename)
 	uint32_t netfsize = htonl(fsize);	
 	memcpy(buf, &netfsize,sizeof(uint32_t));
 	memcpy(buf+4,filename,strlen(filename));
-	send(*sockfd,buf,24,0);
+	SEND(*sockfd,buf,24,0);
 	int read = 0;	
 	while(feof(transFile) == 0)
 	{
 		read = fread(buf,1,1000,transFile);
-		int sent = send(*sockfd,buf,read,0);
+		int sent = SEND(*sockfd,buf,read,0);
 		if(sent != read)
 		{
 			fprintf(stdout, "sent %d Reason %s\n\n", sent, strerror(errno));
@@ -52,7 +52,7 @@ unsigned long fileSize(const char *filePath)
 
 void createConnection(int * sockfd, struct sockaddr_in * sockaddr, char *port, char * serverIp)
 {
-	*sockfd = socket(AF_INET, SOCK_STREAM,0);
+	*sockfd = SOCKET(AF_INET, SOCK_STREAM,0);
 	if(*sockfd < 0)
 	{
 		fprintf(stdout, "%s\n", "socket could not be made");
@@ -63,9 +63,9 @@ void createConnection(int * sockfd, struct sockaddr_in * sockaddr, char *port, c
 	sockaddr->sin_port = htons(atoi(port));
 	sockaddr->sin_addr.s_addr = inet_addr(serverIp);	
 	memset(&(sockaddr->sin_zero),'\0',8);
-	if(connect(*sockfd,(struct sockaddr *)sockaddr,sizeof(struct sockaddr_in)) < 0)
+	if(BIND(*sockfd,(struct sockaddr *)sockaddr,sizeof(struct sockaddr_in)) < 0)
 	{
-		fprintf(stderr, "%s failed becuase %s\n", "failed to connect", strerror(errno));
+		fprintf(stderr, "%s failed becuase %s\n", "failed to bind", strerror(errno));
 		close(*sockfd);
 		exit(0);
 	}
