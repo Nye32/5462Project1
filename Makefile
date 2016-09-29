@@ -2,7 +2,7 @@ CC = gcc
 
 OPTIONS = -std=gnu99
 
-ALL:FTPC FTPS TCPDC TCPDS
+ALL:FTPC FTPS TCPDC TCPDS TIMR TIMRDEMO
 
 
 FTPC:ftpc.c tcpapi.c
@@ -17,6 +17,12 @@ TCPDC:tcpdc.c tcpapi.c crc32.c
 TCPDS:tcpds.c tcpapi.c crc32.c
 	$(CC) $(OPTIONS)  tcpapi.c crc32.c  tcpds.c -o tcpds
 
+TIMR: timerprocess.c
+	$(CC) $(OPTIONS) timerprocess.c -o tp
+
+TIMRDEMO: timerDEMO.c
+	$(CC) $(OPTIONS) timerDEMO.c -o td
+
 clean:
-	rm ftpc ftps tcpdc tcpds
+	rm ftpc ftps tcpdc tcpds tp td
 	rm -r recvd

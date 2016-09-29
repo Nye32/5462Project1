@@ -83,16 +83,32 @@ for doing checksumming so that garbled packets can be found and dealt with
 file that contains the headers and function signatures for functions
 in crc32.c
 
+====| timerprocess.c |===========================================
+
+Contains the logic and methods creating, maintaining, and printing
+the linked list containing the timers for packets. Interacted via
+timerDEMO.c which sends packets of 4 bytes that includes a flag 
+byte (1 = Insert, 2 = Remove, 3 = Quit), a byteSeqNum byte, and 2
+bytes containging two ints that represent the double time value.
+
+====| timerDEMO.c |==============================================
+
+Contains the logic and hardcoded timer starting and canceling logic.
+Interacts with timerproccess.c via starttimer(), canceltimer() and
+quittimer();
+
 ___________________
 
 Running Instruction
 ___________________
 
+====| File Transfer |=============================================
+
 To successfully execute a file transfer using Project 1, one must
 complete the following steps. Note: cM = Client Machine 
 									sM = Server Machine
 
-1) Comple the code by executing:
+1) Compile the code by executing:
 	| $ make clean
 	| $ make
 
@@ -108,3 +124,20 @@ complete the following steps. Note: cM = Client Machine
 
 5) Run ftpc by executing the following on the client machine
 	| cM$ ftpc <server-IP> <server-PORT> <local-file-to-transfer>
+
+
+====| Timer Demo |================================================
+
+To successfully execute a timer demo using Project 1, one must
+complete the following steps. Note: cM = Client Machine 
+									sM = Server Machine
+
+1) Compile the code by executing:
+	| $ make clean
+	| $ make
+
+2) Run tp by executing in a terminal
+	| sM$ tp <local-port>
+
+3) Run td by executing in a terminal
+	| cM$ td <remote-ip> <remote-port>
