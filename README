@@ -1,8 +1,8 @@
 _____________________
 | Andrew Lee		|
 | Subash Chebolu	|
-| CSE5462	Lab 03	|
-| 09-11-16	README	|
+| CSE5462  Project 1|
+| 09-11-16 README	|
 |___________________|
 
 ___________________
@@ -10,53 +10,52 @@ ___________________
 PROGRAM DESCRIPTION
 ___________________
 
-Using Lab02 as a foundation, the goal of Lab 03 is to implement
-a TCP like networking protocol using UDP as the underlying
-transfer method. This is done by replacing all the TCP function
-calls (send, recv, socket, bind) with the UDP calls (sendto, 
-recvfrom, socket, and bind). Each of the files used are described
-below.
+Using everything built so far Project 1 focuses on creating a fully 
+functional file transfer protocal using udp. We are to try to create
+a everything from a timing system to figure out when to send packets 
+as well as acknowledgements to make sure that the packet were received
+correctly.
 
 ====| ftps.c |===================================================
 
-Largely untouched from Lab02, ftps.c contains the server code
+ftps.c contains the server code
 for recieving the file to be transfered and writing it to a local
 folder "recvd". The main changes were, as described above,
 replacing the bind, socket, send, and recv with BIND, SOCKET,
 SEND, and RECV which are user defined functions described in
-srbaclib.c. Once started, ftps.c will request a certain number of
+tcpapi.c. Once started, ftps.c will request a certain number of
 bytes from tcpds.
 
 ====| ftpc.c |===================================================
 
-Largely untouched from Lab02, ftpc.c contains the client code for
+ftpc.c contains the client code for
 sending a local file, across the network 
 	(tcpdc -> Troll -> tcpds -> ftps)
 where it will be written to a new file by ftps.c. Like ftps.c, 
 the main changes involved changing the bind, socket, send and recv
-with our user defined srbaclib.c functions BIND, SOCKET, SEND, and 
+with our user defined tcpapi.c functions BIND, SOCKET, SEND, and 
 RECV. Once started with the proper parameters, ftpc.c will attempt
 to send a file through the network to the given server socket.
 
-====| srbaclib.c |================================================
+====| tcpapi.c |================================================
 
-New for Lab03 is our library file that contains the new methods
+Same as for Lab03 it is our library file that contains the new methods
 that are responsible for the creation of sockets and sending of 
 packets. The following functions are described in srbaclib.c:
 	SEND - Converts the TCP send() to the UDP sendto()
 	RECV - Converts the TCP recv() to the UDP recvfrom()
 	BIND - Identical to bind() but assigns dest_addr
-	ACCEPT - No functionality for Lab03
-	CONNECT - No functionality for Lab03
+	ACCEPT - No functionality for Project 1
+	CONNECT - No functionality for Project 1
 	SOCKET - Identical to socket()
 
-====| srbaclib.h |================================================
+====| tcpapi.h |================================================
 
 Header file that contains the function definitions for srbaclib.c
 
 ====| tcpds.c |===================================================
 
-Contains the methods for recieving data from the ftps.c server that
+Contains the methods for receiving data from the ftps.c server that
 includes 
 	1) The fact that the server is ready to recieve the file
 	2) The size of the buffer it is expecting
@@ -72,15 +71,24 @@ which is the tcpds.c.
 ====| Makefile |==================================================
 
 Contains the command line arguements for compiling and cleaning the
-Lab03 files.
+Project 1 files.
 
+====| crc32.c |==================================================
+
+file that contains code borrowed (more details in file) from the internet
+for doing checksumming so that garbled packets can be found and dealt with
+
+====| crc32.h |==================================================
+
+file that contains the headers and function signatures for functions
+in crc32.c
 
 ___________________
 
 Running Instruction
 ___________________
 
-To successfully execute a file transfer using Lab03, one must
+To successfully execute a file transfer using Project 1, one must
 complete the following steps. Note: cM = Client Machine 
 									sM = Server Machine
 

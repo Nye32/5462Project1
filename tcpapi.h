@@ -10,8 +10,8 @@
 
 // Global Variables
 struct sockaddr dest_addr;
-struct sockaddr * return_addr;
-socklen_t * return_addrlen;
+struct sockaddr return_addr;
+socklen_t  return_addrlen;
 
 // SEND
 ssize_t SEND(int sockfd, const void *buffer, size_t len, int flags);
@@ -30,3 +30,6 @@ void CONNECT(void);
 
 // SOCKET
 int SOCKET(int family, int type, int protocol);
+
+
+void setSendAddress(struct sockaddr dest);

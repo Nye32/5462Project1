@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stddef.h>
-#include "srbaclib.h"
+#include "tcpapi.h"
 #include <arpa/inet.h>
 
 // SEND
@@ -18,7 +18,7 @@ ssize_t SEND(int sockfd, const void *buffer, size_t len, int flags) {
 
 // RECV
 ssize_t RECV(int sockfd, void *buf, size_t len, int flags) {
-	return recvfrom(sockfd, buf, len, flags, (struct sockaddr *)return_addr, return_addrlen);
+	return recvfrom(sockfd, buf, len, flags, (struct sockaddr *)&return_addr, &return_addrlen);
 }
 
 // BIND
@@ -40,4 +40,10 @@ void CONNECT(void) {
 // SOCKET
 int SOCKET(int family, int type, int protocol) {
 	return socket(family, type, protocol);
+}
+
+// Set Send Address
+void setSendAddress(struct sockaddr dest)
+{
+	dest_addr = dest;
 }

@@ -11,25 +11,30 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
-#include "srbaclib.h"
+#include "tcpapi.h"
 
+
+//sending the file
 void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename)
 {
+	//creating the buffer and setting up the first SEND with the 24 byte header
 	fprintf(stderr, "size of file is %d\n", fsize);
 	void * buf = (void *) malloc(1000);
 	bzero(buf,1000);
 	uint32_t netfsize = htonl(fsize);
 	memcpy(buf, &netfsize,sizeof(uint32_t));
 	memcpy(buf+4,filename,strlen(filename));
-	SEND(*sockfd,buf,24,0);
-	//sendto(*sockfd, buf, 24,0,&dest_addr,sizeof(struct sockaddr_in));
 	int read = 0;	
+	read = fread(buf+24,1,1000-24,transFile);
+	SEND(*sockfd,buf,read+24,0);
+
+	
+	//SEND bytes until the file descriptor reaches the end of the file
 	while(feof(transFile) == 0)
 	{
 		read = fread(buf,1,1000,transFile);
 		int sent = SEND(*sockfd,buf,read,0);
-		usleep(10 * 1000);
-	 //int sent=	sendto(*sockfd, buf, read,0,(struct sockaddr *)&dest_addr,sizeof(struct sockaddr_in));
+		usleep(3000 * 1000);
 		if(sent != read)
 		{
 			fprintf(stdout, "sent %d Reason %s\n\n", sent, strerror(errno));
@@ -37,10 +42,14 @@ void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename)
 			exit(0);
 		}
 	}
+
+	//free the buffer
 	free(buf);
 	return;
 }
 
+
+//for the size and other details of the file being sent
 unsigned long fileSize(const char *filePath)
 {
  
@@ -52,7 +61,7 @@ unsigned long fileSize(const char *filePath)
 }
 
 
-
+//creating the connections used for SENDing the file through UDP
 void createConnection(int * sockfd, struct sockaddr_in * sockaddr, char *port, char * serverIp)
 {
 	*sockfd = SOCKET(AF_INET, SOCK_DGRAM,IPPROTO_UDP);
@@ -66,36 +75,45 @@ void createConnection(int * sockfd, struct sockaddr_in * sockaddr, char *port, c
 	sockaddr->sin_port = htons(atoi(port));
 	sockaddr->sin_addr.s_addr = inet_addr(serverIp);	
 	memset(&(sockaddr->sin_zero),'\0',8);
-	/*if(BIND(*sockfd,(struct sockaddr *)sockaddr,sizeof(struct sockaddr_in)) < 0)
-	{
-		fprintf(stderr, "%s %s\n", "failed to bind, failed because", strerror(errno));
-		close(*sockfd);
-		exit(0);
-	}*/
-	dest_addr = *((struct sockaddr *)sockaddr);
+
+
+	setSendAddress(*((struct sockaddr*) sockaddr));
 	return;
 }
 
-
+//main method
 int main(int args, char * argv[])
 {
+
+	//aurgument checking
 	if (args != 4)
 	{
 		fprintf(stderr,"%s %d %s\n" , "please give three aurguments,",args - 1,"were entered, the aurguments are remote-ip, remote-port, local-file-to-transfer");
 
 	}
 	
+	//opening file
 	FILE* transFile = fopen(argv[3],"r");//trying to open local-file-to-transfer  in read mode
-
 	if(transFile == NULL)//Checking if input file was opened correctly
  	{
 		fprintf(stdout,"%s","please enter a valid path to an existing file for the third argument\n");
 		exit(0);//if not opened correctly, exit program
 	}
- 	uint32_t fsize = fileSize(argv[3]);	
+
+
+	//getting size of the file
+ 	uint32_t fsize = fileSize(argv[3]);
+	
+	//created the socket for sending file and the sockaddr_in for the file	
 	int sockfd;
 	struct sockaddr_in sockaddr;		
+
+	//creating the connections for sending the file
 	createConnection(&sockfd, &sockaddr, argv[2], argv[1]);
+
+	//finally sending the file
 	sendFile(&sockfd,transFile,fsize,argv[3]);
-	fprintf(stdout, "%s %lu %d \n", "ended normally", sizeof(uint32_t), fsize);
+
+	//printing out information if sent successfully
+	fprintf(stdout, "%s\n", "ended normally");
 }
