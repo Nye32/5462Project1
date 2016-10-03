@@ -256,8 +256,15 @@ int main(int argc, char * argv[]) {
 	fd_set readfds;
 	struct timeval tv;
 	while(1) {
+
+		// Set Select sleep (either 10000usec or wait time of head node)
 		tv.tv_sec = 0;
-		tv.tv_usec = 10000;
+		if (head != NULL) {
+			tv.tv_usec = head->dtime * 1000000;
+		} else {
+			tv.tv_usec = 10000;
+		}
+
 		FD_ZERO(&readfds);
 		FD_SET(msgsock, &readfds);
 		if (select(FD_SETSIZE, &readfds, NULL, NULL, &tv) < 0) {
