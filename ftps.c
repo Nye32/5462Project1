@@ -28,7 +28,6 @@
 int main (int argc, char *argv[]) {
 	
 	// Variables
-	int port;
 	int sock;
 	int rval = 0;
 	int filesize = 0;
@@ -39,14 +38,6 @@ int main (int argc, char *argv[]) {
 	uint32_t request_size = 4;
 	
 	
-	// Ensure Proper Argument Usage
-	if (argc != 2) {
-		printf("ERROR: Incorrect number of arguements.");
-		printf(" Please run using the following format...\n");
-		printf("ftps <local-port>\n\n");
-		exit(1);
-	}
-	port = atoi(argv[1]);
 	
 	// Wait for client connection
 	if ((sock = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
@@ -57,7 +48,7 @@ int main (int argc, char *argv[]) {
 	// Construct sent socket
 	sin_addr.sin_family = AF_INET;
 	sin_addr.sin_addr.s_addr = INADDR_ANY; 
-	sin_addr.sin_port = htons(port);
+	sin_addr.sin_port = htons(atoi("2000"));
 	memset(&(sin_addr.sin_zero), '\0',8);
 
 	// Bind Socket
