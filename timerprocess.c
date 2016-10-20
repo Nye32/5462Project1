@@ -19,6 +19,8 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <time.h>
+#include <math.h>
+#include <inttypes.h>
 
 #define BUFSIZE 1000
 
@@ -40,6 +42,7 @@ struct listnode {
 int insertValue(double dtime, int port, uint32_t byteSeqNum) {
 	double elapse = 0.0;
 	current = head;
+	printf("INSERTING %d\n", byteSeqNum);
 	
 	// If no list exists, create one
 	if (current == NULL) {
@@ -186,11 +189,20 @@ int printList() {
 }
 
 // Decrements time value once every second
-double decrement(time_t prev) {
-	time_t now = time(NULL);
-	double dif = difftime(now, prev);
-	//printf("Decrement Difference: %d\n",dif);
-	if ((dif >= 1.0) && (head != NULL)) {
+double decrement(double prev) {
+	struct timespec monotime;
+	clock_gettime(CLOCK_MONOTONIC, &monotime);
+	time_t nows = monotime.tv_sec;
+	double nowms = monotime.tv_nsec / 1000000;
+	double now = nows + (nowms / 1000);
+	double dif = now - prev;
+
+	// Troubleshooting Printouts
+	//printf("prev: %f.\n", prev);
+	//printf("now: %f.\n", now);
+	//printf("elapsed: %f.\n", dif);
+
+	if (head != NULL) {
 		head->dtime = head->dtime - dif;
 		if (head->dtime == 0.0) {
 			removeValue(head->byteSeqNum);
@@ -210,7 +222,7 @@ double decrement(time_t prev) {
 		printList();
 		return(now);
 	}
-	return(prev);
+	return(now);
 }
 
 
@@ -251,13 +263,25 @@ int main(int argc, char * argv[]) {
 	printf("timerprocess Initialized. Awaiting connection...\n");
 
 	// Listen for commands
-	time_t prev = time(NULL);
+	struct timespec monotime;
+	clock_gettime(CLOCK_MONOTONIC, &monotime);
+	time_t prevs = monotime.tv_sec;
+	double prevms = monotime.tv_nsec / 1000000;
+	double prev = prevs + (prevms / 1000);
+
 	int addr_len = sizeof(sin_addr);
 	fd_set readfds;
 	struct timeval tv;
 	while(1) {
+
+		// Set Select sleep (either 10000usec or wait time of head node)
 		tv.tv_sec = 0;
-		tv.tv_usec = 10000;
+		if (head != NULL) {
+			tv.tv_usec = head->dtime * 1000000;
+		} else {
+			tv.tv_usec = 10000;
+		}
+
 		FD_ZERO(&readfds);
 		FD_SET(msgsock, &readfds);
 		if (select(FD_SETSIZE, &readfds, NULL, NULL, &tv) < 0) {
@@ -304,8 +328,6 @@ int main(int argc, char * argv[]) {
 			}
 
 			//printf("Flag: %d\nbyte: %d\ntime: %f\n", flag, byte, time);
-			
-			prev = decrement(prev);
 			
 			// Start = 1
 			if (flag == 1) {

@@ -104,7 +104,7 @@ void main (int args, char *argv[]) {
 	starttimer(10.050,2);
 	starttimer(30.0,3);
 	canceltimer(1);
-	sleep(5);
+	usleep(32000);
 	canceltimer(3);
 	starttimer(20.0,4);
 	sleep(6);
