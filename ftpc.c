@@ -34,7 +34,7 @@ void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename)
 	{
 		read = fread(buf,1,1000,transFile);
 		int sent = SEND(*sockfd,buf,read,0);
-		usleep(3000 * 1000);
+		usleep(20000);
 		if(sent != read)
 		{
 			fprintf(stdout, "sent %d Reason %s\n\n", sent, strerror(errno));
