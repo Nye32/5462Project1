@@ -1,7 +1,3 @@
-
-
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -18,6 +14,7 @@
 #include <inttypes.h>
 #include "cbuffer.h"
 
+// Node containing packet information
 struct packNode
 {
 	int seqnum;
@@ -27,7 +24,7 @@ struct packNode
 	struct packNode * next;
 };
 
-
+// Initialize Global Variables
 char cirbuffer[64000];
 struct packNode * head;
 int dstart = 0;
@@ -49,18 +46,19 @@ struct packNode * newPackNode(int dat, int siz, int seq)
 	return pack;
 }
 
+// Initialize Head Node
 void initHead()
 {
 	head = newPackNode(0,0,0);
 }
 
-
+// Release node from memory
 void freePackNode(struct packNode * pack)
 {
 	free(pack);
 }
 
-
+// Returns minimumn
 int min(int a, int b)
 {
 	if(a < b)
@@ -70,6 +68,7 @@ int min(int a, int b)
 	return b;
 }
 
+// Returns the number of bytes available
 int spaceLeft()
 {
 	if(dend < dstart)
@@ -92,7 +91,7 @@ int spaceLeft()
 	}
 }
 
-
+// Returns whether or not buffer is full
 int isFull()
 {
 	if(spaceLeft() == 0)
@@ -102,17 +101,20 @@ int isFull()
 	return 0;
 }
 
-
+// Adds data to buffer
 int addData(char * data, int size)
 {
 	int retval = 0;
+	// Ensures there is room for data
 	if(abs(spaceLeft()) >= 0 && abs(spaceLeft()) > size)
 	{
+		// Determine if wraparound is required
 		if((64000 - dend) > size)
 		{
 			memcpy(cirbuffer+dend,data, size);
 			dend += size;
 		}
+		// Wraparound
 		else
 		{
 			memcpy(cirbuffer+dend,data,64000-dend);
@@ -131,7 +133,7 @@ int addData(char * data, int size)
 }
 
 
-
+// Maintains window relation to buffer
 void checkWindow()
 {
 	struct packNode * current = head->next;
@@ -217,12 +219,9 @@ void checkWindow()
 		current = current->next;
 	}
 
-
-
 }
 
-
-
+// Returns the seqnum for next data packet
 int requestBSN()
 {
 	struct packNode * current = head->next;
@@ -240,7 +239,7 @@ int requestBSN()
 	return -1;
 }
 
-
+// Returns the data size for the seqnum
 int requestSize(int num)
 {
 	struct packNode * current = head->next;
@@ -256,7 +255,7 @@ int requestSize(int num)
 	return 0;
 }
 
-
+// sets *d to contain the data in seqnum
 void requestData(int num, char * d)
 {	struct packNode * current = head->next;
  	while(current != NULL)
@@ -281,7 +280,7 @@ void requestData(int num, char * d)
  	return;
 }
 
-
+// set ack for seqnum
 int recvACK(int num)
 {
 
