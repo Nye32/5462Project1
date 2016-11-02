@@ -103,13 +103,28 @@ void main (int args, char *argv[]) {
 	starttimer(20.32,1);
 	starttimer(10.050,2);
 	starttimer(30.0,3);
-	canceltimer(1);
-	usleep(32000);
-	canceltimer(3);
-	starttimer(20.0,4);
-	sleep(6);
-	starttimer(18.0,5);
-	canceltimer(5);
-	canceltimer(8);
-	timerquit();
+	while(1) {
+		//read file as it is received
+		char eByte[sizeof(int)];
+		int read = recv(sockfd, eByte, sizeof(int), 0);
+		if(read < 0)
+		{
+			fprintf(stderr, "%s\n", "failed to read pack, discarding");	
+		}
+
+		printf("%d Expired.\n", ntohl(*((int *)(eByte))));
+	}
+
+	// starttimer(20.32,1);
+	// starttimer(10.050,2);
+	// starttimer(30.0,3);
+	// canceltimer(1);
+	// usleep(32000);
+	// canceltimer(3);
+	// starttimer(20.0,4);
+	// sleep(6);
+	// starttimer(18.0,5);
+	// canceltimer(5);
+	// canceltimer(8);
+	// timerquit();
 }

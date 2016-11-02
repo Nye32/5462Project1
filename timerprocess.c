@@ -25,6 +25,9 @@
 #define BUFSIZE 1000
 
 // Global Variables
+int port;
+int msgsock;
+struct sockaddr_in sin_addr;
 struct listnode *head;
 struct listnode *tail;
 struct listnode *current;
@@ -169,6 +172,17 @@ int removeValue(uint32_t byteSeqNum) {
 	return 0;
 }
 
+void expiration(int byteSeqNum) {
+	printf("Expiration Notice: %d.\n", byteSeqNum);
+
+	// Construct Expiration Packet
+	int temp = htonl(byteSeqNum);
+	char * buf = (char *) malloc(sizeof(int));
+	bzero(buf,sizeof(int));
+	memcpy(buf, &temp, sizeof(int));
+	sendto(msgsock,buf,sizeof(int),0, (struct sockaddr *)&sin_addr, sizeof(sin_addr));
+}
+
 // Prints the current Linked List
 int printList() {
 	int count = 0;
@@ -188,7 +202,7 @@ int printList() {
 	return 0;
 }
 
-// Decrements time value once every second
+// Decrements time based on prev value
 double decrement(double prev) {
 	struct timespec monotime;
 	clock_gettime(CLOCK_MONOTONIC, &monotime);
@@ -209,6 +223,8 @@ double decrement(double prev) {
 		// Time difference is greater than delay of head
 		} else if (head->dtime < 0.0) {
 			while (head->dtime <= 0.0) {
+				// Send Expiration notice
+				expiration(head->byteSeqNum);
 				if (head->next == NULL) {
 					removeValue(head->byteSeqNum);
 					printList();
@@ -228,10 +244,7 @@ double decrement(double prev) {
 
 int main(int argc, char * argv[]) {
 	// Variables
-	int port;
-	int msgsock;
 	int rval = 0;
-	struct sockaddr_in sin_addr;
 	char buf[BUFSIZE];
 	
 	// Ensure Proper Argument Usage
