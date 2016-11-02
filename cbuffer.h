@@ -1,27 +1,32 @@
-// Maintians window relation to buffer
+
 void checkWindow();
 
-// Add data to circular buffer
+
+
 int addData(char * data, int size);
 
-// Ack a packet
+
+
 int recvACK();
 
-// Returns seq number for next packet
-int requestBSN();
 
-// Returns size for seqnum
+
+void sendWindow();
+
+
+
 int requestSize(int num);
 
-// Sets data for next packet to * data
+
 void requestData(int num, char * data);
 
-// Checks to see if buffer is full
+
+
 int isFull();
 
-// Initializes Head of List
-void initHead();
 
+
+void initialize();
 
 
 
