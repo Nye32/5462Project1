@@ -15,7 +15,7 @@
 
 
 //sending the file
-void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename)
+void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename, int * recvfd)
 {
 	//creating the buffer and setting up the first SEND with the 24 byte header
 	fprintf(stderr, "size of file is %d\n", fsize);
@@ -27,22 +27,23 @@ void sendFile(int * sockfd, FILE * transFile, uint32_t fsize, char * filename)
 	int read = 0;	
 	read = fread(buf+24,1,1000-24,transFile);
 	SEND(*sockfd,buf,read+24,0);
-
+	char temp[1];
+	RECV(*recvfd, temp, sizeof(temp), 0);
 	
 	//SEND bytes until the file descriptor reaches the end of the file
 	while(feof(transFile) == 0)
 	{
 		read = fread(buf,1,1000,transFile);
 		int sent = SEND(*sockfd,buf,read,0);
-		usleep(20000);
 		if(sent != read)
 		{
 			fprintf(stdout, "sent %d Reason %s\n\n", sent, strerror(errno));
 			fprintf(stderr,"%s\n","failed to send correctly");
 			exit(0);
 		}
+		RECV(*recvfd, temp, sizeof(temp), 0);
 	}
-
+	
 	//free the buffer
 	free(buf);
 	return;
@@ -62,9 +63,10 @@ unsigned long fileSize(const char *filePath)
 
 
 //creating the connections used for SENDing the file through UDP
-void createConnection(int * sockfd, struct sockaddr_in * sockaddr, char *port, char * serverIp)
+void createConnection(int * recvfd, struct sockaddr_in * sockaddr_recv, int * sockfd, struct sockaddr_in * sockaddr)
 {
-	*sockfd = SOCKET(AF_INET, SOCK_DGRAM,IPPROTO_UDP);
+	*sockfd = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	*recvfd = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if(*sockfd < 0)
 	{
 		fprintf(stdout, "%s\n", "socket could not be made");
@@ -72,9 +74,20 @@ void createConnection(int * sockfd, struct sockaddr_in * sockaddr, char *port, c
 	}
 	
 	sockaddr->sin_family = AF_INET;
-	sockaddr->sin_port = htons(atoi(port));
-	sockaddr->sin_addr.s_addr = inet_addr(serverIp);	
+	sockaddr->sin_port = htons(atoi("5000"));
+	sockaddr->sin_addr.s_addr = inet_addr("127.0.0.1");	
 	memset(&(sockaddr->sin_zero),'\0',8);
+
+	sockaddr_recv->sin_family = AF_INET;
+	sockaddr_recv->sin_port = htons(3000);
+	sockaddr->sin_addr.s_addr = inet_addr("127.0.0.1");
+	memset(&(sockaddr_recv->sin_zero), '\0',8);
+	if(BIND(*recvfd, (struct sockaddr *) sockaddr_recv, sizeof(struct sockaddr_in))<0)
+	{
+		fprintf(stderr,"failed to bind recv port\n");
+		exit(0);
+	}
+
 
 
 	setSendAddress(*((struct sockaddr*) sockaddr));
@@ -86,14 +99,14 @@ int main(int args, char * argv[])
 {
 
 	//aurgument checking
-	if (args != 4)
+	if (args != 2)
 	{
-		fprintf(stderr,"%s %d %s\n" , "please give three aurguments,",args - 1,"were entered, the aurguments are remote-ip, remote-port, local-file-to-transfer");
+		fprintf(stderr,"%s %d %s\n" , "please give one aurgument,",args - 1,"were entered, the aurgument is local-file-to-transfer");
 
 	}
 	
 	//opening file
-	FILE* transFile = fopen(argv[3],"r");//trying to open local-file-to-transfer  in read mode
+	FILE* transFile = fopen(argv[1],"r");//trying to open local-file-to-transfer  in read mode
 	if(transFile == NULL)//Checking if input file was opened correctly
  	{
 		fprintf(stdout,"%s","please enter a valid path to an existing file for the third argument\n");
@@ -102,17 +115,19 @@ int main(int args, char * argv[])
 
 
 	//getting size of the file
- 	uint32_t fsize = fileSize(argv[3]);
+ 	uint32_t fsize = fileSize(argv[1]);
 	
 	//created the socket for sending file and the sockaddr_in for the file	
 	int sockfd;
+	int recvfd;
 	struct sockaddr_in sockaddr;		
+	struct sockaddr_in sockaddr_recv;
 
 	//creating the connections for sending the file
-	createConnection(&sockfd, &sockaddr, argv[2], argv[1]);
+	createConnection(&recvfd, &sockaddr_recv, &sockfd, &sockaddr);
 
 	//finally sending the file
-	sendFile(&sockfd,transFile,fsize,argv[3]);
+	sendFile(&sockfd,transFile,fsize,argv[1], &recvfd);
 
 	//printing out information if sent successfully
 	fprintf(stdout, "%s\n", "ended normally");

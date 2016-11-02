@@ -122,6 +122,8 @@ void hostisset(int * hostSock, struct sockaddr_in * ftpsaddr)
 	//{
 
 		//sending the data
+		
+
 		int sent = SEND(*hostSock, buffer, *request_size, 0);
 		if(sent < 0)
 		{
@@ -169,8 +171,6 @@ void remoteisset(int * remoteSock, struct sockaddr_in * trolladdr)
 		fprintf(stderr,"retcrc = %d\n",*crccheckval);
 		fprintf(stderr, "checksum = %d\n",retcrc);
 	
-
-
 
 		//dealing with bad packet
 		if(retcrc == *crccheckval)	

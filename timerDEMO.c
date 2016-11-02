@@ -111,5 +111,5 @@ void main (int args, char *argv[]) {
 	starttimer(18.0,5);
 	canceltimer(5);
 	canceltimer(8);
-	timerquit();
+//	timerquit();
 }

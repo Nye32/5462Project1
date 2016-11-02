@@ -11,7 +11,7 @@ int recvACK();
 
 
 
-int requestBSN();
+void sendWindow();
 
 
 
@@ -26,8 +26,7 @@ int isFull();
 
 
 
-void initHead();
-
+void initialize();
 
 
 

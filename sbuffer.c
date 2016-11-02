@@ -1,3 +1,114 @@
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <string.h>
+#include <sys/unistd.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <time.h>
+#include <math.h>
+#include <inttypes.h>
+
+
+char buffer[64000];
+int dstart = 0;
+int dend = 0;
+int isempty = 1;
+
+
+struct cirNode
+{
+	struct cirNode * next;
+	int firstSeq;
+	int lastSeq;
+	int data;
+	int length;
+	int filled;
+};
+
+struct cirNode * head;
+
+
+struct cirNode * newCirNode()
+{
+	struct cirNode * cir = (struct cirNode *) malloc(sizeof(struct cirNode));
+	cir->next = NULL;
+	cir->data = 0;
+	cir->length = 0;
+	cir->filled = 0;
+	return cir;
+}
+
+
+void initHead()
+{
+	head->next = newCirNode();
+	head->next->data = 0;
+	head->next->length = 64000;
+	head->next->filled = 0;
+	head->next->firstSeq = 1;
+	head->next->lastSeq = 64;
+}
+
+void  freeCirNode(struct cirNode * cir) 
+{
+	free(cir);
+}
+int validbuffer(struct cirNode* cir)
+{
+
+}
+
+void addData(int seqnum, int size ,char * data)
+{		
+	struct cirNode * current = head->next;
+	while(current != NULL)
+	{
+		if(!(current->filled))
+		{
+			if(current->lastSeq >= seqnum && current->firstSeq <= seqnum)
+			{
+				if(seqnum == current->firstSeq)
+				{
+
+				}
+				int x = (current->firstSeq - seqnum) * 1000 + current->data;
+				if(size + x > 64000)
+				{
+					memcpy(buffer+x,data,64000-x);
+					memcpy(buffer, data, size - (64000 - x));
+				}
+
+				
+			}
+		}
+
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 //___________________________
 //| Andrew Lee				|
 //| CSE5462	Project 1		|
@@ -283,3 +394,4 @@ int printList() {
 	}
 	return 0;
 }
+*/

@@ -1,5 +1,4 @@
-
-
+//TODO
 
 
 #include <stdio.h>
@@ -16,7 +15,9 @@
 #include <time.h>
 #include <math.h>
 #include <inttypes.h>
+#include "tcpapi.h"
 #include "cbuffer.h"
+#include "crc32.h"
 
 struct packNode
 {
@@ -28,14 +29,67 @@ struct packNode
 };
 
 
+struct trollSock
+{
+	struct sockaddr_in remote;
+	uint32_t crc32;
+	uint32_t packnum;
+	char buffer[1000];// = malloc(1000);
+}pack;
+
+struct rttPack
+{
+	int bsn;
+	int on;
+	struct timespec timestart;
+};
+
+
 char cirbuffer[64000];
+struct rttPack packtimes[20];
 struct packNode * head;
 int dstart = 0;
 int dend = 0;
 int windowend = 0;
 int packseq = 1;
 int isEmpty = 1;
+double SRTT = 0;
+double RTTVAR = 0;
+double RTO = 1000;
 
+
+void rttPackSetup(struct rttPack rttpack)
+{
+	rttpack.bsn = 0;
+	rttpack.on = 0;
+}
+
+//creating the socket descritor and the sockaddrs for forwarding the packet
+int remoteSockfd;
+struct sockaddr_in trolladdr;
+//creating the connections required for UDP SEND
+
+
+
+
+//for the necessary connections required for sending the file and receiving the file
+void makeConnections(struct sockaddr_in * trolladdr,char * serverIp)
+{
+
+
+	pack.remote.sin_family = htons(AF_INET);
+	pack.remote.sin_port = htons(atoi("6050"));
+	pack.remote.sin_addr.s_addr = inet_addr(serverIp);	
+	memset(&(pack.remote.sin_zero),'\0',8);                                             	
+
+
+	
+	trolladdr->sin_family = AF_INET;
+	trolladdr->sin_port = htons(atoi("4000"));
+	trolladdr->sin_addr.s_addr = inet_addr("127.0.0.1");
+	memset(&(trolladdr->sin_zero),'\0',8);                                             	
+	return;
+}                                                                                     
 
 
 struct packNode * newPackNode(int dat, int siz, int seq)
@@ -49,9 +103,17 @@ struct packNode * newPackNode(int dat, int siz, int seq)
 	return pack;
 }
 
-void initHead()
+void initialize(char * serverIp, int remoteSock)
 {
 	head = newPackNode(0,0,0);
+	remoteSockfd = remoteSock;
+	makeConnections(&trolladdr, serverIp);
+	
+	for(int i = 0; i<20; i++)
+	{
+		rttPackSetup(packtimes[i]);
+	}
+
 }
 
 
@@ -106,9 +168,9 @@ int isFull()
 int addData(char * data, int size)
 {
 	int retval = 0;
-	if(abs(spaceLeft()) >= 0 && abs(spaceLeft()) > size)
+	if(abs(spaceLeft()) >= size)
 	{
-		if((64000 - dend) > size)
+		if((64000 - dend) >= size)
 		{
 			memcpy(cirbuffer+dend,data, size);
 			dend += size;
@@ -142,7 +204,8 @@ void checkWindow()
 			if(current->next == NULL)
 			{
 				dstart = (dstart + current->size) % 64000;
-				freePackNode(current);
+				struct packNode * cur = current;
+				freePackNode(cur);
 				current = NULL;
 				head->next = NULL;
 				isEmpty = 1;
@@ -164,9 +227,9 @@ void checkWindow()
 
 
 	current = head->next; 
-	if((64000-spaceLeft()) >= 2000)
+	if((64000-spaceLeft()) >= 20000)
 	{
-		windowend = (dstart + 2000) % 64000;
+		windowend = (dstart + 20000) % 64000;
 	}
 	else
 	{
@@ -182,40 +245,42 @@ void checkWindow()
 	{
 		disttowindow = (64000 - dstart) + windowend;
 	}
-
-	if(current == NULL)
+	if(disttowindow > 0)
 	{
-		int mini = min(1000,disttowindow);
-		current = newPackNode(dstart, mini,packseq++);
-		head->next = current;
-		disttowindow -= mini;
-	}
-	else
-	{
-		while(current->next != NULL)
+		if(current == NULL)
 		{
-			disttowindow -= current->size;
-			current = current->next;
-			
+			int mini = min(1000,disttowindow);
+			current = newPackNode(dstart, mini,packseq++);
+			head->next = current;
+			disttowindow -= mini;
 		}
-		disttowindow -= current->size;
+		else
+		{
+			while(current->next != NULL)
+			{
+				disttowindow -= current->size;
+				current = current->next;
+				
+			}
+			disttowindow -= current->size;
+		}
+
+
+		while(disttowindow > 0)
+		{
+			int mini = min(1000,disttowindow);
+			current->next = newPackNode((current->data + current->size) % 64000, mini,packseq++);
+			disttowindow -= mini;
+			current = current->next;
+		}
 	}
-
-
-	while(disttowindow > 0)
-	{
-		int mini = min(1000,disttowindow);
-		current->next = newPackNode((current->data + current->size) % 64000, mini,packseq++);
-		disttowindow -= mini;
-		current = current->next;
-	}
-
 	current = head->next;
 	while(current != NULL)
 	{
-	//	fprintf(stderr,"\nseqnum = %d, data = %d, size = %d\n",current->seqnum,current->data,current->size);
+		fprintf(stderr,"\nseqnum = %d, data = %d, size = %d\n",current->seqnum,current->data,current->size);
 		current = current->next;
 	}
+	fprintf(stderr,"%d------------------------%d\n",dstart, dend);
 
 
 
@@ -223,21 +288,60 @@ void checkWindow()
 
 
 
-int requestBSN()
+void sendWindow()
 {
 	struct packNode * current = head->next;
+	/*int extwindow = 0;
+	if(windowend < dstart)
+		extwindow  = 64000 + windowend;
+	else
+		extwindow = windowend;
+	while(current != NULL && (current->data + current->size) < extwindow)
+	{*/
 	while(current != NULL)
 	{
 		if(current->ack > 0)
 			current = current->next;
 		else
 		{
-			int num = current->seqnum;
+			int bsn = current->seqnum;
+			int size = requestSize(bsn);
+			char data[size];
+			requestData(bsn, data);
+
+			memcpy(pack.buffer, data, size);
+	
+			//do the crc checksumming
+			uint32_t crcpoly = 0x04C11DB7;
+			pack.crc32 = crc32(crcpoly,pack.buffer,size);
+		
+			//printing checksum
+			fprintf(stderr,"checksum = %d\n",pack.crc32);
+
+			memcpy(&(pack.packnum), &bsn, sizeof(uint32_t));
+			fprintf(stderr,"packetnumber = %d\n", bsn);
+
+			//Sending the changed packet forward to troll
+			setSendAddress(*(struct sockaddr *) &trolladdr);
+			
+			int i = 0;
+			while(packtimes[i].on != 0)
+			{
+				i++;
+			}
+
+			clock_gettime(CLOCK_MONOTONIC, &(packtimes[i].timestart));	
+			if(SEND(remoteSockfd, (char *)&pack, size+sizeof(struct trollSock)-1000, 0) < 0)
+			{
+				fprintf(stderr, "%s %s \n", "couldn't send...quiting...", strerror(errno));
+				exit(0);
+			}
+			
+			packtimes[i].on = 1;
+			packtimes[i].bsn = bsn;
 			current->ack = 1;
-			return num;
 		}
 	}
-	return -1;
 }
 
 
@@ -281,9 +385,44 @@ void requestData(int num, char * d)
  	return;
 }
 
+void timeComps(double delta)
+{
+	if(SRTT == 0)
+	{
+		SRTT = delta;
+	}
+	if(RTTVAR == 0)
+	{
+		RTTVAR = (delta/2);
+	}
+	else
+	{
+		SRTT = ((1 - (1/8) ) * SRTT) + ((1/8) * delta);
+		RTTVAR = ((1 - (1/4)) * RTTVAR) + ((1/4) * fabs(SRTT - delta));
+		RTO = SRTT + (4 * RTTVAR);
+	}
+
+	fprintf(stderr, "SRTT = %f, RTTVAR = %f, RTO = %f\n", SRTT, RTTVAR, RTO);
+
+}
+
 
 int recvACK(int num)
 {
+	struct timespec stop, start;
+	
+	clock_gettime(CLOCK_MONOTONIC, &stop);
+	int i = 0;
+	while(packtimes[i].bsn != num)
+		i++;
+
+	start = packtimes[i].timestart;	
+
+	double  delta = ((stop.tv_sec - start.tv_sec) * 1000.0) + ((stop.tv_nsec - start.tv_nsec) / 1000000.0);
+	fprintf(stderr,"delta = %f\n",delta);
+	timeComps(delta);
+	
+	packtimes[i].on = 0;
 
 	struct packNode * current = head->next;
 	while(current!=NULL)
@@ -291,17 +430,15 @@ int recvACK(int num)
 		if(current->seqnum == num)
 		{
 			current->ack = 2;
+			checkWindow();
 			return 1; 
 		}
+		else
+			current = current->next;
 	}
 	return 0;
 
 }
-
-
-
-
-
 
 
 

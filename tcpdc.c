@@ -18,23 +18,20 @@
 #include <math.h>
 #include <time.h>
 
-double SRTT = 0;
-double RTTVAR = 0;
-double RTO = 1000;
+int hostSockfd;
+int remoteSockfd;
+struct sockaddr_in hostSockaddr;
+struct sockaddr_in ackret;
+struct sockaddr_in sendhost;
 
+fd_set read_fd;
+int tempStored = 0;
+int bread = 0;
 
-//creating the troll header
-struct trollSock
-{
-	struct sockaddr_in remote;
-	uint32_t crc32;
-	uint32_t packnum;
-	char buffer[1000];// = malloc(1000);
-}pack;
 
 
 //for the necessary connections required for sending the file and receiving the file
-void createConnection(struct sockaddr_in * trolladdr,int * hostSockfd,int * remoteSockfd, struct sockaddr_in * hostSockaddr, struct sockaddr_in * ackret, char * serverIp)
+void createConnection(int * hostSockfd,int * remoteSockfd, struct sockaddr_in * hostSockaddr, struct sockaddr_in * ackret, struct sockaddr_in * sendhost)
 {
 	*hostSockfd = SOCKET(AF_INET, SOCK_DGRAM,IPPROTO_UDP);
 	*remoteSockfd = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -65,107 +62,91 @@ void createConnection(struct sockaddr_in * trolladdr,int * hostSockfd,int * remo
 		exit(0);
 	}
 
-	pack.remote.sin_family = htons(AF_INET);
-	pack.remote.sin_port = htons(atoi("6050"));
-	pack.remote.sin_addr.s_addr = inet_addr(serverIp);	
-	memset(&(pack.remote.sin_zero),'\0',8);                                             	
-
-
 	
-	trolladdr->sin_family = AF_INET;
-	trolladdr->sin_port = htons(atoi("4000"));
-	trolladdr->sin_addr.s_addr = inet_addr("127.0.0.1");
-	memset(&(trolladdr->sin_zero),'\0',8);                                             	
+	sendhost->sin_family = AF_INET;
+	sendhost->sin_port = htons(atoi("3000"));
+	sendhost->sin_addr.s_addr = inet_addr("127.0.0.1");	
+	memset(&(sendhost->sin_zero),'\0',8);      	
+	
 
 	return;
 }                                                                                     
-
-
-void timeComps(double delta)
-{
-	if(SRTT == 0)
-	{
-		SRTT = delta;
-	}
-	if(RTTVAR == 0)
-	{
-		RTTVAR = (delta/2);
-	}
-	else
-	{
-		SRTT = ((1 - (1/8) ) * SRTT) + ((1/8) * delta);
-		RTTVAR = ((1 - (1/4)) * RTTVAR) + ((1/4) * fabs(SRTT - delta));
-		RTO = SRTT + (4 * RTTVAR);
-	}
-
-	fprintf(stderr, "SRTT = %f, RTTVAR = %f, RTO = %f\n", SRTT, RTTVAR, RTO);
-
-}
-
-
-
+int x = 0;
 
 //receiving and sending the file
-void receiveAndSend( struct sockaddr_in * trolladdr, int * hostSockfd, int * remoteSockfd)
+void receiveAndSend()
 {
-	//read file as it is received
-	char tem[1000];
-	int read = RECV(*hostSockfd, tem, 1000, 0);
-	fprintf(stderr,"\nreceived %d\n",read);
-	if(read < 0)
+	FD_ZERO(&read_fd);
+	FD_SET(hostSockfd, &read_fd);
+	FD_SET(remoteSockfd, &read_fd);
+	struct timeval timeout;
+	timeout.tv_usec = 1 * 1000;	
+	timeout.tv_sec = 0;
+	char temp[1000];
+	if(select(FD_SETSIZE, &read_fd,NULL,NULL,&timeout) < 0)
 	{
-		fprintf(stderr, "%s\n", "failed to read pack, discarding");	
+		fprintf(stderr,"%s\n","select failed...exiting..." );
+		exit(0);
 	}
-	else
+	if(tempStored)
 	{
-
-		addData(tem, read);
-		
-		
-		int num = requestBSN();
-		int size = requestSize(num);
-		char data[size];
-		requestData(num, data);
-
-		memcpy(pack.buffer,data, size);
-
-
-		//do the crc checksumming
-		uint32_t crcpoly = 0x04C11DB7;
-		pack.crc32 = crc32(crcpoly,pack.buffer,size);
-
-		//printing checksum
-		fprintf(stderr,"checksum = %d\n",pack.crc32);
-
-		
-		memcpy(&(pack.packnum), &num, sizeof(uint32_t));
-		fprintf(stderr,"packetnumber = %d\n", num);
-
-
-		//Sending the changed packet forward to troll
-		setSendAddress(*(struct sockaddr *) trolladdr);
-
-		struct timespec start, stop;
-		clock_gettime(CLOCK_MONOTONIC, &start);
-
-		if(SEND(*remoteSockfd, (char *)&pack, size+sizeof(struct trollSock)-1000, 0) < 0)
+		if(addData(temp, bread) == 1)
+			{
+				setSendAddress(*(struct sockaddr *) &sendhost);
+				char ret[] = {'1'};
+				SEND(hostSockfd,ret, 1, 0);	
+				tempStored = 0;
+			}
+		else
 		{
-			fprintf(stderr, "%s %s \n", "couldn't send...quiting...", strerror(errno));
-			exit(0);
-		}
-		char buffer[20];
-		RECV(*remoteSockfd,buffer, sizeof(buffer),0 );
+			perror("still failing\n");
+			tempStored = 1;
+		}	
 
-		clock_gettime(CLOCK_MONOTONIC, &stop);
-
-		double  delta = ((stop.tv_sec - start.tv_sec) * 1000.0) + ((stop.tv_nsec - start.tv_nsec) / 1000000.0);
-		fprintf(stderr,"delta = %f\n",delta);
-		timeComps(delta);
-
-		uint32_t * ack = (uint32_t *)(buffer + 16);
-		fprintf(stderr,"returned ack is %u\n",*ack);
-		recvACK(*ack);
 	}
+	if(FD_ISSET(hostSockfd, &read_fd) && tempStored == 0)
+	{
+		bread = RECV(hostSockfd, temp, 1000, 0);
+		fprintf(stderr,"\nreceived %d\n",bread);
+		if(bread < 0)
+		{
+			fprintf(stderr, "%s\n", "failed to read pack, discarding");	
+		}				
+		else
+		{
+
+			if(addData(temp, bread) == 1)
+			{
+				setSendAddress(*(struct sockaddr *) &sendhost);
+				char ret[] = {'1'};
+				SEND(hostSockfd,ret, 1, 0);	
+				tempStored = 0;
+			}
+			else
+			{
+				perror("Too Full");
+				tempStored = 1;			
+			}
+		
+		}
+	}
+	if(FD_ISSET(remoteSockfd, &read_fd))
+	{
+		char buffer[1000];
+		int recvd = RECV(remoteSockfd,buffer, sizeof(buffer),0 );
+		int nums = recvd/(sizeof(struct sockaddr_in) + sizeof(uint32_t));
+		for(int i = 0; i<nums; i++)
+		{
+			uint32_t * ack = (uint32_t *)((buffer + 16) + ( i * (sizeof(struct sockaddr_in) + sizeof(uint32_t))));
+			fprintf(stderr,"Returned ACK is %u\n",*ack);
+			recvACK(*ack);
+		}
+
+	}
+
+	if(x % 64 ==  0)
+		sendWindow();
+	x++;
 }
 
 
@@ -173,7 +154,6 @@ void receiveAndSend( struct sockaddr_in * trolladdr, int * hostSockfd, int * rem
 int main(int args, char * argv[])
 {
 
-	initHead();
 	//checking the aurguments
 	if (args != 2)
 	{
@@ -182,28 +162,16 @@ int main(int args, char * argv[])
 
 	}
 	
-	//creating the socket descritor and the sockaddrs for forwarding the packet
-	int hostSockfd;
-	int remoteSockfd;
-	struct sockaddr_in hostSockaddr;
-	struct sockaddr_in trolladdr;
-	struct sockaddr_in ackret;
-	//creating the connectio ns required for UDP SEND
-	createConnection(&trolladdr, &hostSockfd, &remoteSockfd, &hostSockaddr, &ackret, argv[1]);
-
-	//zeroing the buffer just for safety
-	bzero(pack.buffer,1000);
-
+	createConnection(&hostSockfd, &remoteSockfd, &hostSockaddr, &ackret, &sendhost);
+	initialize(argv[1], remoteSockfd);
+	
 	//while loop for daemon type feel for constantly receiving and sending data packets through while modifying them
 	for(;;)
 	{
-		receiveAndSend(&trolladdr, &hostSockfd, &remoteSockfd);
+		receiveAndSend();
 	}
 
 	return 1;
 }
-
-
-
 
 

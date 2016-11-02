@@ -86,6 +86,11 @@ int main (int argc, char *argv[]) {
 		request_size -= RECV(sock, databufin+(rval-request_size), request_size, 0);
 	}
 
+	perror("HELLO\n");
+	for(int i = 0; i<rval; i++)
+	{
+		fprintf(stderr,"%c",databufin[i]);
+	}
 
 	//confirming header as sent
 	fprintf(stderr,"got header\n");
