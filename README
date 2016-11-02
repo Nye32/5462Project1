@@ -3,6 +3,7 @@ _____________________
 | Subash Chebolu	|
 | CSE5462  Project 1|
 | 09-11-16 README	|
+| Updated: 10-20-16 |
 |___________________|
 
 ___________________
@@ -11,12 +12,12 @@ PROGRAM DESCRIPTION
 ___________________
 
 Using everything built so far Project 1 focuses on creating a fully 
-functional file transfer protocal using udp. We are to try to create
-a everything from a timing system to figure out when to send packets 
-as well as acknowledgements to make sure that the packet were received
-correctly.
+functional file transfer protocal using udp. We are to attempting to
+create everything from a timing system to figure out when to send
+packets as well as acknowledgements to make sure that the packet were
+received correctly.
 
-====| ftps.c |===================================================
+====| ftps.c |=====================================================
 
 ftps.c contains the server code
 for recieving the file to be transfered and writing it to a local
@@ -26,7 +27,7 @@ SEND, and RECV which are user defined functions described in
 tcpapi.c. Once started, ftps.c will request a certain number of
 bytes from tcpds.
 
-====| ftpc.c |===================================================
+====| ftpc.c |=====================================================
 
 ftpc.c contains the client code for
 sending a local file, across the network 
@@ -37,11 +38,12 @@ with our user defined tcpapi.c functions BIND, SOCKET, SEND, and
 RECV. Once started with the proper parameters, ftpc.c will attempt
 to send a file through the network to the given server socket.
 
-====| tcpapi.c |================================================
+====| tcpapi.c |==================================================
 
-Same as for Lab03 it is our library file that contains the new methods
-that are responsible for the creation of sockets and sending of 
-packets. The following functions are described in srbaclib.c:
+Same as for Lab03 it is our library file that contains the new
+methods that are responsible for the creation of sockets and 
+sending of packets. The following functions are described in 
+srbaclib.c:
 	SEND - Converts the TCP send() to the UDP sendto()
 	RECV - Converts the TCP recv() to the UDP recvfrom()
 	BIND - Identical to bind() but assigns dest_addr
@@ -49,7 +51,7 @@ packets. The following functions are described in srbaclib.c:
 	CONNECT - No functionality for Project 1
 	SOCKET - Identical to socket()
 
-====| tcpapi.h |================================================
+====| tcpapi.h |==================================================
 
 Header file that contains the function definitions for srbaclib.c
 
@@ -75,13 +77,36 @@ Project 1 files.
 
 ====| crc32.c |==================================================
 
-file that contains code borrowed (more details in file) from the internet
-for doing checksumming so that garbled packets can be found and dealt with
+File that contains code borrowed (more details in file) from the 
+internet for doing checksumming so that garbled packets can be 
+found and dealt with
 
 ====| crc32.h |==================================================
 
-file that contains the headers and function signatures for functions
-in crc32.c
+File that contains the headers and function signatures for 
+functions in crc32.c
+
+====| sbuffer.h |================================================
+
+Header file that contains relevent methods needed in ftps that
+pertain to the server circular buffer implementation, sbuffer.c
+
+====| sbuffer.c |================================================
+
+Contains the implementation for the circular server buffer used
+to store data. Implementation involves using a linked list to
+maintain circular buffer.
+
+====| cbuffer.h |================================================
+
+Header file that contains relevent methods needed in ftpc that
+pertain to the client circular buffer implementation, cbuffer.c
+
+====| cbuffer.c |================================================
+
+Contains the implementation for the circular client buffer used
+to store data. Implementation involves using a linked list to
+maintain circular buffer.
 
 ====| timerprocess.c |===========================================
 
