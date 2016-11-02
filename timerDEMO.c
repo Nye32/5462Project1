@@ -21,16 +21,16 @@
 
 #define BUFSIZE 1000
 
-int sockfd;
+int timersockfd;
 struct sockaddr_in cli_addr;
 struct sockaddr_in expire;
 
 // Establishes connection with host - Copied from Lab02
-void createConnection(int * sockfd, struct sockaddr_in * cli_addr)
+void createConnection(int * timersockfd, struct sockaddr_in * cli_addr)
 {
-	//*sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	*sockfd = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if(*sockfd < 0)
+	//*timersockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	*timersockfd = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if(*timersockfd < 0)
 	{
 		fprintf(stdout, "%s\n", "socket could not be made");
 		exit(0);
@@ -46,7 +46,7 @@ void createConnection(int * sockfd, struct sockaddr_in * cli_addr)
 	expire.sin_port = htons(atoi("3231"));
 	expire.sin_addr.s_addr = inet_addr("127.0.0.1");
 	memset(&(expire.sin_zero), '\0',8);
-	if(BIND(*sockfd, (struct sockaddr *)&expire, sizeof(struct sockaddr_in))<0)
+	if(BIND(*timersockfd, (struct sockaddr *)&expire, sizeof(struct sockaddr_in))<0)
 	{
 		fprintf(stderr,"%s\n","couldn't bind socket");
 		exit(0);
@@ -77,8 +77,8 @@ void starttimer(double time, uint32_t byteSeqNum) {
 	memcpy(buf+isize,&lbyte,isize);
 	memcpy(buf+(2*isize), &ltime,isize);
 	memcpy(buf+(3*isize), &ldec,isize);
-	//sendto(sockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
-	SEND(sockfd,buf,(4*isize),0);
+	//sendto(timersockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	SEND(timersockfd,buf,(4*isize),0);
 	printf("SENT\nFlag: %d\nByte: %d\nTime: %d.%d\n", ntohl(flag), ntohl(lbyte), ntohl(ltime), ntohl(ldec));
 }
 
@@ -91,8 +91,8 @@ void canceltimer(uint32_t byteSeqNum) {
 	bzero(buf,2*isize);
 	memcpy(buf, &flag,isize);
 	memcpy(buf+isize, &lbyte,isize);
-	//sendto(sockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
-	SEND(sockfd, buf, (4*isize), 0);
+	//sendto(timersockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	SEND(timersockfd, buf, (4*isize), 0);
 	printf("SENT\nFlag: %d\nByte: %d\n", ntohl(flag), ntohl(lbyte));
 }
 
@@ -104,8 +104,8 @@ void timerquit() {
 	char * buf = (char *) malloc(2*isize);
 	bzero(buf,2*isize);
 	memcpy(buf, &flag,isize);
-	//sendto(sockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
-	SEND(sockfd, buf, (4*isize), 0);
+	//sendto(timersockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	SEND(timersockfd, buf, (4*isize), 0);
 	printf("SENT\nFlag: %d\n", ntohl(flag));
 }
 
@@ -119,16 +119,17 @@ void main (int args, char *argv[]) {
 	// }
 
 	// Establish Connection with tp
-	createConnection(&sockfd, &cli_addr);
+	createConnection(&timersockfd, &cli_addr);
 
 	starttimer(20.32,1);
 	starttimer(10.050,2);
 	starttimer(30.0,3);
+
 	while(1) {
 		//read file as it is received
 		char eByte[sizeof(int)];
-		//int read = recvfrom(sockfd, eByte, sizeof(int),0, NULL, NULL);
-		int read = RECV(sockfd, eByte, sizeof(int), 0);
+		//int read = recvfrom(timersockfd, eByte, sizeof(int),0, NULL, NULL);
+		int read = RECV(timersockfd, eByte, sizeof(int), 0);
 		if(read < 0)
 		{
 			fprintf(stderr, "%s\n", "failed to read pack, discarding");	
