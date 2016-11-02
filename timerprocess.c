@@ -21,13 +21,14 @@
 #include <time.h>
 #include <math.h>
 #include <inttypes.h>
+#include "tcpapi.h"
 
 #define BUFSIZE 1000
 
 // Global Variables
-int port;
 int msgsock;
 struct sockaddr_in sin_addr;
+struct sockaddr_in expire;
 struct listnode *head;
 struct listnode *tail;
 struct listnode *current;
@@ -177,10 +178,11 @@ void expiration(int byteSeqNum) {
 
 	// Construct Expiration Packet
 	int temp = htonl(byteSeqNum);
-	char * buf = (char *) malloc(sizeof(int));
-	bzero(buf,sizeof(int));
-	memcpy(buf, &temp, sizeof(int));
-	sendto(msgsock,buf,sizeof(int),0, (struct sockaddr *)&sin_addr, sizeof(sin_addr));
+	char * buff = (char *) malloc(sizeof(int));
+	bzero(buff,sizeof(int));
+	memcpy(buff, &temp, sizeof(int));
+	//sendto(msgsock,buf,sizeof(int),0, (struct sockaddr *)&sin_addr, sizeof(sin_addr));
+	SEND(msgsock,buff,sizeof(int),0);
 }
 
 // Prints the current Linked List
@@ -244,35 +246,52 @@ double decrement(double prev) {
 
 int main(int argc, char * argv[]) {
 	// Variables
-	int rval = 0;
 	char buf[BUFSIZE];
 	
 	// Ensure Proper Argument Usage
-	if (argc != 2) {
-		printf("ERROR: Incorrect number of arguements.");
-		printf(" Please run using the following format...\n");
-		printf("tp <local-port>\n\n");
-		exit(1);
-	}
-	port = atoi(argv[1]);
+	// if (argc != 2) {
+	// 	printf("ERROR: Incorrect number of arguements.");
+	// 	printf(" Please run using the following format...\n");
+	// 	printf("tp <local-port>\n\n");
+	// 	exit(1);
+	// }
+	// port = atoi(argv[1]);
 	
 	// Wait for client connection
-	if ((msgsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+	// if ((msgsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+	// 	perror("Error: Unable to Open Datagram Socket.");
+	// 	exit(1);
+	// }
+	if ((msgsock = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
 		perror("Error: Unable to Open Datagram Socket.");
 		exit(1);
 	}
 	
 	// Construct sent socket
 	sin_addr.sin_family = AF_INET;
-	sin_addr.sin_addr.s_addr = INADDR_ANY;
-	sin_addr.sin_port = htons(port);
-		
+	sin_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	sin_addr.sin_port = htons(atoi("3132"));
+	memset(&(sin_addr.sin_zero),'\0',8);
+
+	// Expiration use
+	expire.sin_family = AF_INET;
+	expire.sin_port = htons(atoi("3231"));
+	expire.sin_addr.s_addr = inet_addr("127.0.0.1");
+	memset(&(expire.sin_zero), '\0',8);
 
 	// Bind Socket
-	if (bind(msgsock, (struct sockaddr *)&sin_addr, sizeof(struct sockaddr_in)) < 0) {
+	// if (bind(msgsock, (struct sockaddr *)&sin_addr, sizeof(struct sockaddr_in)) < 0) {
+	// 	perror("Error: Unable to establish UDP.");
+	// 	exit(1);
+	// }
+	if (BIND(msgsock, (struct sockaddr *)&sin_addr, sizeof(struct sockaddr_in)) < 0) {
 		perror("Error: Unable to establish UDP.");
 		exit(1);
 	}
+
+	// Set SEND address
+	setSendAddress(*(struct sockaddr *)&expire);
+
 	printf("timerprocess Initialized. Awaiting connection...\n");
 
 	// Listen for commands
@@ -303,8 +322,8 @@ int main(int argc, char * argv[]) {
 			// Clear Buffer (Set it to 0)
 			bzero(buf, sizeof(buf));
 			//recv(msgsock, buf, 3*sizeof(int), 0);
-			rval = recvfrom(msgsock, buf, 2*sizeof(int)+sizeof(double), 0, (struct sockaddr *)&sin_addr, &addr_len);
-			rval = rval - 3*sizeof(int);
+			//rval = recvfrom(msgsock, buf, 2*sizeof(int)+sizeof(double), 0, (struct sockaddr *)&sin_addr, &addr_len);
+			RECV(msgsock, buf, 4*sizeof(uint32_t), 0);
 			// Determine values 
 			int flag = 0;
 			uint32_t byte = 0;

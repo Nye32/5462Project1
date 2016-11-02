@@ -17,11 +17,11 @@ TCPDC:tcpdc.c tcpapi.c crc32.c
 TCPDS:tcpds.c tcpapi.c crc32.c
 	$(CC) $(OPTIONS)  tcpapi.c crc32.c tcpds.c sbuffer.c -o tcpds
 
-TIMR: timerprocess.c
-	$(CC) $(OPTIONS) timerprocess.c -o tp
+TIMR: timerprocess.c tcpapi.c
+	$(CC) $(OPTIONS) tcpapi.c timerprocess.c -o tp
 
-TIMRDEMO: timerDEMO.c
-	$(CC) $(OPTIONS) timerDEMO.c -o td
+TIMRDEMO: timerDEMO.c tcpapi.c
+	$(CC) $(OPTIONS) tcpapi.c timerDEMO.c -o td
 
 clean:
 	rm ftpc ftps tcpdc tcpds tp td

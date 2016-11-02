@@ -17,16 +17,19 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include "tcpapi.h"
 
 #define BUFSIZE 1000
 
 int sockfd;
 struct sockaddr_in cli_addr;
+struct sockaddr_in expire;
 
 // Establishes connection with host - Copied from Lab02
-void createConnection(int * sockfd, struct sockaddr_in * cli_addr, char *port, char * serverIp)
+void createConnection(int * sockfd, struct sockaddr_in * cli_addr)
 {
-	*sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	//*sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	*sockfd = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if(*sockfd < 0)
 	{
 		fprintf(stdout, "%s\n", "socket could not be made");
@@ -34,9 +37,24 @@ void createConnection(int * sockfd, struct sockaddr_in * cli_addr, char *port, c
 	}
 	
 	cli_addr->sin_family = AF_INET;
-	cli_addr->sin_port = htons(atoi(port));
-	cli_addr->sin_addr.s_addr = inet_addr(serverIp);	
+	cli_addr->sin_port = htons(atoi("3132"));
+	cli_addr->sin_addr.s_addr = inet_addr("127.0.0.1");	
 	memset(&(cli_addr->sin_zero),'\0',8);
+
+	// Expiration use
+	expire.sin_family = AF_INET;
+	expire.sin_port = htons(atoi("3231"));
+	expire.sin_addr.s_addr = inet_addr("127.0.0.1");
+	memset(&(expire.sin_zero), '\0',8);
+	if(BIND(*sockfd, (struct sockaddr *)&expire, sizeof(struct sockaddr_in))<0)
+	{
+		fprintf(stderr,"%s\n","couldn't bind socket");
+		exit(0);
+	}
+
+	// Set SEND address
+	setSendAddress(*(struct sockaddr *)cli_addr);
+
 	return;
 }
 
@@ -59,7 +77,8 @@ void starttimer(double time, uint32_t byteSeqNum) {
 	memcpy(buf+isize,&lbyte,isize);
 	memcpy(buf+(2*isize), &ltime,isize);
 	memcpy(buf+(3*isize), &ldec,isize);
-	sendto(sockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	//sendto(sockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	SEND(sockfd,buf,(4*isize),0);
 	printf("SENT\nFlag: %d\nByte: %d\nTime: %d.%d\n", ntohl(flag), ntohl(lbyte), ntohl(ltime), ntohl(ldec));
 }
 
@@ -72,7 +91,8 @@ void canceltimer(uint32_t byteSeqNum) {
 	bzero(buf,2*isize);
 	memcpy(buf, &flag,isize);
 	memcpy(buf+isize, &lbyte,isize);
-	sendto(sockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	//sendto(sockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	SEND(sockfd, buf, (4*isize), 0);
 	printf("SENT\nFlag: %d\nByte: %d\n", ntohl(flag), ntohl(lbyte));
 }
 
@@ -84,21 +104,22 @@ void timerquit() {
 	char * buf = (char *) malloc(2*isize);
 	bzero(buf,2*isize);
 	memcpy(buf, &flag,isize);
-	sendto(sockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	//sendto(sockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	SEND(sockfd, buf, (4*isize), 0);
 	printf("SENT\nFlag: %d\n", ntohl(flag));
 }
 
 void main (int args, char *argv[]) {
 
 	// Ensure proper argument usage
-	if (args != 3)
-	{
-		printf("Run using the following:\n\n\ttd <remote-ip> <remote-port>\n");
-		exit(0);
-	}
+	// if (args != 3)
+	// {
+	// 	printf("Run using the following:\n\n\ttd <remote-ip> <remote-port>\n");
+	// 	exit(0);
+	// }
 
 	// Establish Connection with tp
-	createConnection(&sockfd, &cli_addr, argv[2], argv[1]);
+	createConnection(&sockfd, &cli_addr);
 
 	starttimer(20.32,1);
 	starttimer(10.050,2);
@@ -106,12 +127,12 @@ void main (int args, char *argv[]) {
 	while(1) {
 		//read file as it is received
 		char eByte[sizeof(int)];
-		int read = recv(sockfd, eByte, sizeof(int), 0);
+		//int read = recvfrom(sockfd, eByte, sizeof(int),0, NULL, NULL);
+		int read = RECV(sockfd, eByte, sizeof(int), 0);
 		if(read < 0)
 		{
 			fprintf(stderr, "%s\n", "failed to read pack, discarding");	
 		}
-
 		printf("%d Expired.\n", ntohl(*((int *)(eByte))));
 	}
 
