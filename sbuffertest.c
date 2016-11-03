@@ -47,7 +47,7 @@ void standardTest() {
 
 	// remove first packet
 	perror("Request Data");
-	requestData(data);
+	printf("got %d\n",requestData(100000, data));
 	perror("Request Data Print");
 	printList();
 
@@ -88,7 +88,7 @@ void standardTest() {
 	addData(6, 1000, data);
 	printList();
 
-	requestData(data);
+	printf("got %d\n",requestData(100000, data));
 	printList();
 }
 
@@ -98,9 +98,9 @@ void fillTest() {
 		addData(i, 1000, data);
 	}
 	printList();
-	requestData(data);
+	printf("got %d\n",requestData(100000, data));
 	printList();
-	requestData(data);
+	printf("got %d\n",requestData(100000, data));
 	printList();
 }
 
@@ -109,6 +109,6 @@ void main (int args, char *argv[]) {
 	perror("Initialize");
 	initialize();
 
-	//standardTest();
-	fillTest();
+	standardTest();
+	//fillTest();
 }

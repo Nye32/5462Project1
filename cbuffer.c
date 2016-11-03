@@ -354,10 +354,10 @@ void checkWindow()
 	current = head->next;
 	while(current != NULL)
 	{
-	//	fprintf(stderr,"\nseqnum = %d, data = %d, size = %d\n",current->seqnum,current->data,current->size);
+		fprintf(stderr,"\nseqnum = %d, data = %d, size = %d\n",current->seqnum,current->data,current->size);
 		current = current->next;
 	}
-	//fprintf(stderr,"%d------------------------%d\n",dstart, dend);
+	fprintf(stderr,"%d------------------------%d\n",dstart, dend);
 
 
 
@@ -400,18 +400,17 @@ void sendWindow()
 			{
 				i++;
 			}
-			perror("case 1\n");
 
 			fprintf(stderr,"i = %d\n",i);
 			clock_gettime(CLOCK_MONOTONIC, &(packtimes[i].timestart));	
-			perror("case 2\n");
 			if(SEND(remoteSockfd, (char *)&pack, size+sizeof(struct trollSock)-1000, 0) < 0)
 			{
 				fprintf(stderr, "%s %s \n", "couldn't send...quiting...", strerror(errno));
 				exit(0);
 			}
 			
-			starttimer(((double)(RTO))/((double)(1000)), bsn);
+			starttimer(1,bsn);
+			//starttimer(((double)(RTO))/((double)(1000)), bsn);
 			fprintf(stderr,"started timer %d\n", bsn);
 			packtimes[i].on = 1;
 			packtimes[i].bsn = bsn;
@@ -529,12 +528,15 @@ void timerExpire(int bsn)
 		}
 		current = current->next;
 	}
+	perror("case 1\n");
 	
-	int i = 0;
-	while(packtimes[i].bsn != bsn)
-		i++;
-
-	packtimes[i].on = 0;	
+	for(int q =0; q<20; q++)
+	{
+		if(packtimes[q].bsn == bsn)
+		{
+			packtimes[q].on = 0;	
+		}
+	}
 
 }
 
