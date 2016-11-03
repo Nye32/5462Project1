@@ -355,22 +355,8 @@ int requestData(int size, char * d)
 
 			return(size);
 		}
-		
-            struct cirNode * ptr = head;
-            while (ptr->next != head) {
-                ptr=ptr->next;
-            }
-            struct cirNode * node = newCirNode();
-            ptr->next = node;
-            node->next = head;
-            node->filled = 0;
-            node->firstSeq = ptr->lastSeq+1;
-            node->lastSeq = 2147483647;
-            node->data = ptr->data + size;
-            node->size = size;
-            
  	} else {
 		d = NULL;
- 	}
+	}
  	return 0;
 }
