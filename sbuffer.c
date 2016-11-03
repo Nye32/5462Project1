@@ -122,15 +122,30 @@ void mergeList() {
 
 		current =  current->next;
 	}
+	
+	// reset size if only one empty node
+	/*if (head->next == head && head->filled ==0) {
+        head->size = 64000;
+        head->data = 0;
+    }*/
+    
 }
+
 
 int addData(int seqnum, int size ,char * data)
 {	
 	// Merge List to ensure it is proper
 	mergeList();
-
+    struct cirNode * n  = head;
+    int e = 1;
+    while(n->next != head)
+    {
+        e++;
+        n = n->next;
+    }
+    fprintf(stderr,"nums= %d",e);
 	struct cirNode * current = head;
-	while(current != NULL)	{
+	do{
 		// Check for entry that already exists
 		if (current->firstSeq == seqnum && current->filled == 1) {
 			// Already have data!
@@ -271,6 +286,11 @@ int addData(int seqnum, int size ,char * data)
 		// Move Current
 		current = current->next;
 	}
+	while(current != head);
+
+
+
+
 	printf("Unable to Insert data!\n");
 	return 0;
 }
@@ -337,6 +357,6 @@ int requestData(int size, char * d)
 		}
  	} else {
 		d = NULL;
- 	}
+	}
  	return 0;
 }

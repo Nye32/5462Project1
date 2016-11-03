@@ -190,6 +190,7 @@ void remoteisset(int * remoteSock, struct sockaddr_in * trolladdr)
 
 		fprintf(stderr,"read %d\n\n", read);
 	}
+	printList();
 
 	// Last packet
 	if  (lastPacket != 0) {
@@ -228,7 +229,6 @@ void remoteisset(int * remoteSock, struct sockaddr_in * trolladdr)
 			}
 		}
 
-		fprintf(stderr,"read %d\n\n", read);
 	}
 }
 
