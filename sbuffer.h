@@ -13,7 +13,7 @@ void initialize();
 int addData(int byteSeqNum, int size, char *data);
 
 // gets size of first node (if it contains data)
-//int getSize();
+int getSize();
 
 // Checks and gets data
 int requestData(int size, char * temp);

@@ -111,29 +111,19 @@ void hostisset(int * hostSock, struct sockaddr_in * ftpsaddr)
 
 	//checking if request asked for more than we have
 	uint32_t * request_size = temp;
+	char data[*request_size];
+
+	int read = requestData(*request_size, data);
 
 	//setting up to send packet to ftps
 	setSendAddress(*(struct sockaddr *)ftpsaddr);
 	
-	//char temps[*request_size];
-	//getData(*request_size, temps); 
-	
-	//if( temps != NULL)
-	//{
-
-		//sending the data
-		
-
-		int sent = SEND(*hostSock, buffer, *request_size, 0);
-		if(sent < 0)
-		{
-			fprintf(stderr, "%s %s \n","couldn't send data to ftps ...exiting...",strerror(errno));
-			exit(0);
-		}
-	//}
-	//moving data in buffer so that sent data wont be resent and reseting counter of number of bytes available to send
-	memmove(buffer, buffer+sent, counter-sent);
-	counter -= sent;
+	int sent = SEND(*hostSock, data, read, 0);
+	if(sent < 0)
+	{
+		fprintf(stderr, "%s %s \n","couldn't send data to ftps ...exiting...",strerror(errno));
+		exit(0);
+	}
 
 	//freeing buffer
 	free(temp);
