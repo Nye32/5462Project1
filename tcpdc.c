@@ -20,9 +20,12 @@
 
 int hostSockfd;
 int remoteSockfd;
+int timerSockfd;
 struct sockaddr_in hostSockaddr;
 struct sockaddr_in ackret;
 struct sockaddr_in sendhost;
+struct sockaddr_in expire;
+
 
 fd_set read_fd;
 int tempStored = 0;
@@ -31,23 +34,24 @@ int bread = 0;
 
 
 //for the necessary connections required for sending the file and receiving the file
-void createConnection(int * hostSockfd,int * remoteSockfd, struct sockaddr_in * hostSockaddr, struct sockaddr_in * ackret, struct sockaddr_in * sendhost)
+void createConnection(int * hostSockfd,int * remoteSockfd, int * timerSockfd, struct sockaddr_in * hostSockaddr, struct sockaddr_in * ackret, struct sockaddr_in * sendhost, struct sockaddr_in * expire)
 {
 	*hostSockfd = SOCKET(AF_INET, SOCK_DGRAM,IPPROTO_UDP);
 	*remoteSockfd = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if(*hostSockfd < 0 || *remoteSockfd < 0)
+	*timerSockfd = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if(*hostSockfd < 0 || *remoteSockfd < 0 || timerSockfd < 0)
 	{
 		fprintf(stdout, "%s\n", "sockets could not be made");
 		exit(0);
 	}
-
+	
 	hostSockaddr->sin_family = AF_INET;
 	hostSockaddr->sin_port = htons(atoi("5000"));
 	hostSockaddr->sin_addr.s_addr = inet_addr("127.0.0.1");	
 	memset(&(hostSockaddr->sin_zero),'\0',8);      	
 	if(BIND(*hostSockfd, (struct sockaddr *) hostSockaddr, sizeof(struct sockaddr_in))<0)
 	{
-		fprintf(stderr,"%s\n","couldn't bind socket");
+		fprintf(stderr,"%s\n","couldn't bind ftpc socket");
 		exit(0);
 	}
 
@@ -58,7 +62,7 @@ void createConnection(int * hostSockfd,int * remoteSockfd, struct sockaddr_in * 
 	memset(&(ackret->sin_zero),'\0',8);      	
 	if(BIND(*remoteSockfd, (struct sockaddr *) ackret, sizeof(struct sockaddr_in))<0)
 	{
-		fprintf(stderr,"%s\n","couldn't bind socket");
+		fprintf(stderr,"%s\n","couldn't bind ack socket");
 		exit(0);
 	}
 
@@ -67,7 +71,18 @@ void createConnection(int * hostSockfd,int * remoteSockfd, struct sockaddr_in * 
 	sendhost->sin_port = htons(atoi("3000"));
 	sendhost->sin_addr.s_addr = inet_addr("127.0.0.1");	
 	memset(&(sendhost->sin_zero),'\0',8);      	
-	
+
+
+	// Expiration use
+	expire->sin_family = AF_INET;
+	expire->sin_port = htons(atoi("6520"));
+	expire->sin_addr.s_addr = inet_addr("127.0.0.1");
+	memset(&(expire->sin_zero), '\0',8);
+	if(BIND(*timerSockfd, (struct sockaddr *) expire, sizeof(struct sockaddr_in))<0)
+	{
+		fprintf(stderr,"%s\n","couldn't bind timer socket");
+		exit(0);
+	}
 
 	return;
 }                                                                                     
@@ -79,8 +94,9 @@ void receiveAndSend()
 	FD_ZERO(&read_fd);
 	FD_SET(hostSockfd, &read_fd);
 	FD_SET(remoteSockfd, &read_fd);
+	FD_SET(timerSockfd, &read_fd);
 	struct timeval timeout;
-	timeout.tv_usec = 1 * 1000;	
+	timeout.tv_usec = 1000;	
 	timeout.tv_sec = 0;
 	char temp[1000];
 	if(select(FD_SETSIZE, &read_fd,NULL,NULL,&timeout) < 0)
@@ -99,7 +115,7 @@ void receiveAndSend()
 			}
 		else
 		{
-			perror("still failing\n");
+	//		perror("still failing\n");
 			tempStored = 1;
 		}	
 
@@ -143,10 +159,23 @@ void receiveAndSend()
 		}
 
 	}
+	if(FD_ISSET(timerSockfd, &read_fd))
+	{
+		char buffer[1000];
+		int recvd = RECV(timerSockfd,buffer, sizeof(buffer),0 );
+		int nums = recvd/(sizeof(int));
+		for(int i = 0; i<nums; i++)
+		{
+			int * exp = (int *) (buffer + (i * sizeof(int)));
+			*exp = ntohl(*exp);
+			fprintf(stderr,"Timer Expired for is %u\n",*exp);
+			timerExpire(*exp);
+		}
 
-	if(x % 64 ==  0)
-		sendWindow();
-	x++;
+
+	}
+	//sleep(1);
+	sendWindow();
 }
 
 
@@ -162,8 +191,8 @@ int main(int args, char * argv[])
 
 	}
 	
-	createConnection(&hostSockfd, &remoteSockfd, &hostSockaddr, &ackret, &sendhost);
-	initialize(argv[1], remoteSockfd);
+	createConnection(&hostSockfd, &remoteSockfd, &timerSockfd, &hostSockaddr, &ackret, &sendhost, &expire);
+	initialize(argv[1], remoteSockfd, timerSockfd);
 	
 	//while loop for daemon type feel for constantly receiving and sending data packets through while modifying them
 	for(;;)

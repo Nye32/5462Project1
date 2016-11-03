@@ -109,7 +109,7 @@ int main(int args, char * argv[])
 	FILE* transFile = fopen(argv[1],"r");//trying to open local-file-to-transfer  in read mode
 	if(transFile == NULL)//Checking if input file was opened correctly
  	{
-		fprintf(stdout,"%s","please enter a valid path to an existing file for the third argument\n");
+		fprintf(stdout,"%s","please enter a valid path to an existing file for the first argument\n");
 		exit(0);//if not opened correctly, exit program
 	}
 

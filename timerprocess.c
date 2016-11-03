@@ -80,23 +80,30 @@ int insertValue(double dtime, int port, uint32_t byteSeqNum) {
 		node->dtime = (dtime-elapse);
 		node->port = port;
 		node->byteSeqNum = byteSeqNum;
+		fprintf(stderr,"head bsn = %d\n",head->byteSeqNum);
+		fprintf(stderr,"dtime = %f\n",dtime);
 		// Replace Head
-		if (dtime < head->dtime) {
+		if (dtime <= head->dtime) {
+			perror("case 1\n");
 			node->prev = NULL;
 			node->next = current;
 			current->prev = node;
 			head = node;
 		// Non Head/Tail
 		} else if(current->next !=  NULL) {
+			perror("case 2\n");
 			node->next = current->next;
 			current->next->prev = node;
 			node->prev = current;
 			current->next = node;
 		// Current is on tail
 		} else {
+			perror("case 3\n");
 			// Replace tail
 			if (elapse + current->dtime <= dtime) {
+				perror("case 4\n");
 				if (elapse == 0.0) {
+					perror("case 5\n");
 					node->dtime = dtime - current->dtime;
 				}
 				current->next = node;
@@ -105,6 +112,8 @@ int insertValue(double dtime, int port, uint32_t byteSeqNum) {
 				tail = node;
 			// Insert prior to tail
 			} else {
+				perror("case 6\n");
+				perror("case 7\n");
 				current->prev->next = node;
 				node->prev = current->prev;
 				current->prev = node;
@@ -221,6 +230,8 @@ double decrement(double prev) {
 	if (head != NULL) {
 		head->dtime = head->dtime - dif;
 		if (head->dtime == 0.0) {
+			// Send Expiration notice
+			expiration(head->byteSeqNum);
 			removeValue(head->byteSeqNum);
 		// Time difference is greater than delay of head
 		} else if (head->dtime < 0.0) {
@@ -246,7 +257,7 @@ double decrement(double prev) {
 
 int main(int argc, char * argv[]) {
 	// Variables
-	char buf[BUFSIZE];
+	char buf[20 * 4 *sizeof(uint32_t)];
 	
 	// Ensure Proper Argument Usage
 	// if (argc != 2) {
@@ -275,7 +286,7 @@ int main(int argc, char * argv[]) {
 
 	// Expiration use
 	expire.sin_family = AF_INET;
-	expire.sin_port = htons(atoi("3231"));
+	expire.sin_port = htons(atoi("6520"));
 	expire.sin_addr.s_addr = inet_addr("127.0.0.1");
 	memset(&(expire.sin_zero), '\0',8);
 
@@ -323,56 +334,60 @@ int main(int argc, char * argv[]) {
 			bzero(buf, sizeof(buf));
 			//recv(msgsock, buf, 3*sizeof(int), 0);
 			//rval = recvfrom(msgsock, buf, 2*sizeof(int)+sizeof(double), 0, (struct sockaddr *)&sin_addr, &addr_len);
-			RECV(msgsock, buf, 4*sizeof(uint32_t), 0);
+			int read = RECV(msgsock, buf, sizeof(buf), 0);
+			int x = read/(4 * sizeof(uint32_t));
 			// Determine values 
-			int flag = 0;
-			uint32_t byte = 0;
-			double time = 0.0;
-			uint32_t itime = 0;
-			uint32_t dtime = 0;
-			char temp[4];
-			int i = 0;
-			int c = 0;
-			for (i = 0; i < 16; i++) {
-				temp[c] = buf[i];
-				c++;
-				if (i == 3) {
-					flag = ntohl(*((uint32_t *)(temp)));
-					c = 0;
-					bzero(temp, 4);
-				} else if (i == 7) {
-					byte = ntohl(*((uint32_t *)(temp)));
-					c = 0;
-					bzero(temp, 4);
-				} else if (i == 11 && flag == 1) {
-					itime = ntohl(*((uint32_t *)(temp)));
-					c = 0;
-					bzero(temp, 4);
-				} else if (i == 15 && flag == 1) {
-					dtime = ntohl(*((uint32_t *)(temp)));
-					c = 0;
-					bzero(temp, 4);
+			for(int y = 0; y<x; y++)
+			{
+				int flag = 0;
+				uint32_t byte = 0;
+				double time = 0.0;
+				uint32_t itime = 0;
+				uint32_t dtime = 0;
+				char temp[4];
+				int i = 0;
+				int c = 0;
+				for (i = 0; i < 16; i++) {
+					temp[c] = buf[(y * sizeof(uint32_t)) + i];
+					c++;
+					if (i == 3) {
+						flag = ntohl(*((uint32_t *)(temp)));
+						c = 0;
+						bzero(temp, 4);
+					} else if (i == 7) {
+						byte = ntohl(*((uint32_t *)(temp)));
+						c = 0;
+						bzero(temp, 4);
+					} else if (i == 11 && flag == 1) {
+						itime = ntohl(*((uint32_t *)(temp)));
+						c = 0;
+						bzero(temp, 4);
+					} else if (i == 15 && flag == 1) {
+						dtime = ntohl(*((uint32_t *)(temp)));
+						c = 0;
+						bzero(temp, 4);
+					}
 				}
-			}
-			// construct double
-			if (flag == 1) {
-				time = (double)itime + ((double)dtime/1000);
-			}
+				// construct double
+				if (flag == 1) {
+					time = (double)itime + ((double)dtime/1000);
+				}
 
-			//printf("Flag: %d\nbyte: %d\ntime: %f\n", flag, byte, time);
-			
-			// Start = 1
-			if (flag == 1) {
-				insertValue(time, 0, byte);
-				printList();
-			// Cancel = 2
-			} else if (flag == 2) {
-				removeValue(byte);
-				printList();
-			// Quit = 3
-			} else if (flag == 3) {
-				printf("Recieved Quit Flag. Now Quitting...\n");
-				break;
+				//printf("Flag: %d\nbyte: %d\ntime: %f\n", flag, byte, time);
+				
+				// Start = 1
+				if (flag == 1) {
+					insertValue(time, 0, byte);
+					printList();
+				// Cancel = 2
+				} else if (flag == 2) {
+					removeValue(byte);
+					printList();
+				// Quit = 3
+				} else if (flag == 3) {
+					printf("Recieved Quit Flag. Now Quitting...\n");
+					break;
+				}
 			}
 		}
 		// unquote if fix select()

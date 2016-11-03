@@ -43,7 +43,7 @@ void createConnection(int * timersockfd, struct sockaddr_in * cli_addr)
 
 	// Expiration use
 	expire.sin_family = AF_INET;
-	expire.sin_port = htons(atoi("3231"));
+	expire.sin_port = htons(atoi("6520"));
 	expire.sin_addr.s_addr = inet_addr("127.0.0.1");
 	memset(&(expire.sin_zero), '\0',8);
 	if(BIND(*timersockfd, (struct sockaddr *)&expire, sizeof(struct sockaddr_in))<0)

@@ -25,34 +25,13 @@ struct sockaddr_in cli_addr;
 struct sockaddr_in expire;
 
 // Establishes connection with host - Copied from Lab02
-void createTimerConnection(int * timersockfd, struct sockaddr_in * cli_addr)
+void createTimerConnection(struct sockaddr_in * cli_addr)
 {
-	//*timersockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	*timersockfd = SOCKET(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if(*timersockfd < 0)
-	{
-		fprintf(stdout, "%s\n", "socket could not be made");
-		exit(0);
-	}
-	
 	cli_addr->sin_family = AF_INET;
 	cli_addr->sin_port = htons(atoi("3132"));
 	cli_addr->sin_addr.s_addr = inet_addr("127.0.0.1");	
 	memset(&(cli_addr->sin_zero),'\0',8);
 
-	// Expiration use
-	expire.sin_family = AF_INET;
-	expire.sin_port = htons(atoi("3231"));
-	expire.sin_addr.s_addr = inet_addr("127.0.0.1");
-	memset(&(expire.sin_zero), '\0',8);
-	if(BIND(*timersockfd, (struct sockaddr *)&expire, sizeof(struct sockaddr_in))<0)
-	{
-		fprintf(stderr,"%s\n","couldn't bind socket");
-		exit(0);
-	}
-
-	// Set SEND address
-	setSendAddress(*(struct sockaddr *)cli_addr);
 
 	return;
 }
@@ -77,8 +56,9 @@ void starttimer(double time, uint32_t byteSeqNum) {
 	memcpy(buf+(2*isize), &ltime,isize);
 	memcpy(buf+(3*isize), &ldec,isize);
 	//sendto(timersockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	setSendAddress(*(struct sockaddr *)&cli_addr);
 	SEND(timersockfd,buf,(4*isize),0);
-	printf("SENT\nFlag: %d\nByte: %d\nTime: %d.%d\n", ntohl(flag), ntohl(lbyte), ntohl(ltime), ntohl(ldec));
+	//printf("SENT\nFlag: %d\nByte: %d\nTime: %d.%d\n", ntohl(flag), ntohl(lbyte), ntohl(ltime), ntohl(ldec));
 }
 
 // Cancels timer in timerprocess
@@ -91,6 +71,7 @@ void canceltimer(uint32_t byteSeqNum) {
 	memcpy(buf, &flag,isize);
 	memcpy(buf+isize, &lbyte,isize);
 	//sendto(timersockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	setSendAddress(*(struct sockaddr *)&cli_addr);
 	SEND(timersockfd, buf, (4*isize), 0);
 	printf("SENT\nFlag: %d\nByte: %d\n", ntohl(flag), ntohl(lbyte));
 }
@@ -104,6 +85,7 @@ void timerquit() {
 	bzero(buf,2*isize);
 	memcpy(buf, &flag,isize);
 	//sendto(timersockfd,buf,(4*isize),0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+	setSendAddress(*(struct sockaddr *)&cli_addr);
 	SEND(timersockfd, buf, (4*isize), 0);
 	printf("SENT\nFlag: %d\n", ntohl(flag));
 }
@@ -153,6 +135,8 @@ void rttPackSetup(struct rttPack rttpack)
 {
 	rttpack.bsn = 0;
 	rttpack.on = 0;
+	rttpack.timestart.tv_nsec = 0;
+	rttpack.timestart.tv_sec = 0;
 }
 
 //creating the socket descritor and the sockaddrs for forwarding the packet
@@ -194,11 +178,13 @@ struct packNode * newPackNode(int dat, int siz, int seq)
 	return pack;
 }
 
-void initialize(char * serverIp, int remoteSock)
+void initialize(char * serverIp, int remoteSock, int timerSockfd)
 {
 	head = newPackNode(0,0,0);
 	remoteSockfd = remoteSock;
+	timersockfd = timerSockfd;
 	makeConnections(&trolladdr, serverIp);
+	createTimerConnection(&cli_addr);
 	
 	for(int i = 0; i<20; i++)
 	{
@@ -368,10 +354,10 @@ void checkWindow()
 	current = head->next;
 	while(current != NULL)
 	{
-		fprintf(stderr,"\nseqnum = %d, data = %d, size = %d\n",current->seqnum,current->data,current->size);
+	//	fprintf(stderr,"\nseqnum = %d, data = %d, size = %d\n",current->seqnum,current->data,current->size);
 		current = current->next;
 	}
-	fprintf(stderr,"%d------------------------%d\n",dstart, dend);
+	//fprintf(stderr,"%d------------------------%d\n",dstart, dend);
 
 
 
@@ -382,13 +368,7 @@ void checkWindow()
 void sendWindow()
 {
 	struct packNode * current = head->next;
-	/*int extwindow = 0;
-	if(windowend < dstart)
-		extwindow  = 64000 + windowend;
-	else
-		extwindow = windowend;
-	while(current != NULL && (current->data + current->size) < extwindow)
-	{*/
+
 	while(current != NULL)
 	{
 		if(current->ack > 0)
@@ -420,14 +400,19 @@ void sendWindow()
 			{
 				i++;
 			}
+			perror("case 1\n");
 
+			fprintf(stderr,"i = %d\n",i);
 			clock_gettime(CLOCK_MONOTONIC, &(packtimes[i].timestart));	
+			perror("case 2\n");
 			if(SEND(remoteSockfd, (char *)&pack, size+sizeof(struct trollSock)-1000, 0) < 0)
 			{
 				fprintf(stderr, "%s %s \n", "couldn't send...quiting...", strerror(errno));
 				exit(0);
 			}
 			
+			starttimer(((double)(RTO))/((double)(1000)), bsn);
+			fprintf(stderr,"started timer %d\n", bsn);
 			packtimes[i].on = 1;
 			packtimes[i].bsn = bsn;
 			current->ack = 1;
@@ -515,6 +500,8 @@ int recvACK(int num)
 	
 	packtimes[i].on = 0;
 
+	canceltimer(num);
+
 	struct packNode * current = head->next;
 	while(current!=NULL)
 	{
@@ -531,6 +518,24 @@ int recvACK(int num)
 
 }
 
+void timerExpire(int bsn)
+{
+	struct packNode * current = head->next;
+	while(current != NULL)
+	{
+		if(current->seqnum == bsn)
+		{
+			current->ack = 0;
+		}
+		current = current->next;
+	}
+	
+	int i = 0;
+	while(packtimes[i].bsn != bsn)
+		i++;
 
+	packtimes[i].on = 0;	
+
+}
 
 

@@ -26,8 +26,11 @@ int isFull();
 
 
 
-void initialize();
+void initialize( char * serverIp, int remoteSock, int timerSockfd);
 
+
+
+void timerExpire(int bsn);
 
 
 
