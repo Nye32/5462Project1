@@ -10,16 +10,19 @@
 void initialize();
 
 // Inserts value at appropriate position
-int insertValue(int byteSeqNum, int size, char *data);
+int addData(int byteSeqNum, int size, char *data);
 
 // gets size of first node (if it contains data)
-int getSize();
+//int getSize();
 
 // Checks and gets data
-void getData(int size, char * temp);
+void requestData(char * temp);
 
 // free data
-void freeBuffer(char *buffer);
+//void freeBuffer(char *buffer);
 
 // Prints the current Linked List
 int printList();
+
+// merge list (troubleshooting scope)
+//void mergeList();

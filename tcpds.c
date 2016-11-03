@@ -20,6 +20,8 @@
 
 //setting up global variables
 void * buffer;
+char * minibuffer;
+int minibufferSize = 0;
 uint32_t counter = 0;
 fd_set read_fd;
 
@@ -94,7 +96,7 @@ void createConnection(int * hostSockfd, struct sockaddr_in * hostSockaddr, int  
 
 	return;
 
-}                                                                                     
+}
 
 //method for if ftps is requesting bytes
 void hostisset(int * hostSock, struct sockaddr_in * ftpsaddr)
@@ -143,34 +145,32 @@ void hostisset(int * hostSock, struct sockaddr_in * ftpsaddr)
 //remote host(troll) is sending data to store
 void remoteisset(int * remoteSock, struct sockaddr_in * trolladdr)
 {
+	char * tempbuf;
+	char buffer[20*1024];
+	//reading bytes
+	int read = RECV(*remoteSock,buffer,sizeof(buffer),0);
 
-	//printing how much counter is
-	printf("\ncounter = %d\n",counter);
-
-	//making a temporary buffer to hold sent data in to modify it
-	char tempbuf[1024];
-	int rval = 1024;
-
-	//checking of the buffer for data storage is all adapting number of bytes to read for it
-	if(counter<=64000)
+	//checking the number of bytes read
+	if(read < 0)
 	{
+		fprintf(stderr,"%s\n","couldn't recv from remote...exiting...");
+		exit(0);
+	}
 
-		if((64000-counter)<1024)
-			rval = 64000-counter+24;
-		else
-			rval = 1024;
-		
-		
-		//reading bytes
-		int read = RECV(*remoteSock,tempbuf,rval,0);
-		
+	// check to see if end packet (non 1024 size)
+	int lastPacket = read % 1024;
+
+	// for loop for each packet
+	for(int i = read/1024; i > 0; i--) {
+		int offset = ((read/1024) - i) * 1024;
+		tempbuf = buffer + offset;
 		//checking the check sum
 		uint32_t * crccheckval = (uint32_t * )(tempbuf + 16);
 		uint32_t crcpoly = 0x04C11DB7;
 		uint32_t retcrc = crc32(crcpoly, tempbuf + 24, read-24);		
 		fprintf(stderr,"retcrc = %d\n",*crccheckval);
 		fprintf(stderr, "checksum = %d\n",retcrc);
-	
+
 
 		//dealing with bad packet
 		if(retcrc == *crccheckval)	
@@ -181,31 +181,67 @@ void remoteisset(int * remoteSock, struct sockaddr_in * trolladdr)
 		uint32_t *packetnumber =(uint32_t *) (tempbuf + 20);
 		fprintf(stdout,"\npacketnumber = %d\n",*packetnumber );
 
-		setSendAddress(*(struct sockaddr *) trolladdr);	
-		
-		memcpy(&(pack.ack), packetnumber, sizeof(uint32_t));
-
-		if(SEND(*remoteSock,(char *)&pack, sizeof(struct trollSock), 0) < 0)
-		{
-			fprintf(stderr,"\n can't send ack, Quitting....., errno is %s\n",strerror(errno));
-			exit(0);
+		// attempt to write to sbuffer
+		int result = 0;
+		if (retcrc == *crccheckval) {
+			result = addData(*packetnumber, 1000, tempbuf + 24);
 		}
 
-		//copying file sent file data into buffer	
-		memcpy(buffer+counter,tempbuf+24,read-24);
+		// if ACK is to be sent
+		if (result != 0) {
+			setSendAddress(*(struct sockaddr *) trolladdr);	
+			
+			memcpy(&(pack.ack), packetnumber, sizeof(uint32_t));
+
+			if(SEND(*remoteSock,(char *)&pack, sizeof(struct trollSock), 0) < 0)
+			{
+				fprintf(stderr,"\n can't send ack, Quitting....., errno is %s\n",strerror(errno));
+				exit(0);
+			}
+		}
 
 		fprintf(stderr,"read %d\n\n", read);
-		
-		//checking the number of bytes read
-		if(read < 0)
-		{
-			fprintf(stderr,"%s\n","couldn't recv from remote...exiting...");
-			exit(0);
+	}
+
+	// Last packet
+	if  (lastPacket != 0) {
+		//checking the check sum
+		uint32_t * crccheckval = (uint32_t * )(tempbuf + 16);
+		uint32_t crcpoly = 0x04C11DB7;
+		uint32_t retcrc = crc32(crcpoly, tempbuf-lastPacket, lastPacket);		
+		fprintf(stderr,"retcrc = %d\n",*crccheckval);
+		fprintf(stderr, "checksum = %d\n",retcrc);
+
+				//dealing with bad packet
+		if(retcrc == *crccheckval)	
+			fprintf(stderr,"\nCHECK SUM GOOD\n");
+		else
+			fprintf(stderr,"\nBAD CHECK SUM\n");
+
+		uint32_t *packetnumber =(uint32_t *) (tempbuf - lastPacket + 20);
+		fprintf(stdout,"\npacketnumber = %d\n",*packetnumber );
+
+		// attempt to write to sbuffer
+		int result = 0;
+		if (retcrc == *crccheckval) {
+			result = addData(*packetnumber, lastPacket, tempbuf - lastPacket + 24);
 		}
 
-		//incrementing counter by number of data bytes written to buffer
-		counter += read-24;
-  }
+		// if ACK is to be sent
+		if (result != 0) {
+			setSendAddress(*(struct sockaddr *) trolladdr);	
+			
+			memcpy(&(pack.ack), packetnumber, sizeof(uint32_t));
+
+			if(SEND(*remoteSock,(char *)&pack, sizeof(struct trollSock), 0) < 0)
+			{
+				fprintf(stderr,"\n can't send ack, Quitting....., errno is %s\n",strerror(errno));
+				exit(0);
+			}
+		}
+
+		fprintf(stderr,"read %d\n\n", read);
+	}
 }
 
 
@@ -244,7 +280,8 @@ int main(int args, char * argv[])
 		exit(0);
 	}
 	
-//	initialize();
+	// Initialize sbuffer
+	initialize();
 
 
 	//socket and struct sockaddr declaration
@@ -258,8 +295,11 @@ int main(int args, char * argv[])
 	//creating the connections for sending and receiving
 	createConnection(&hostSockfd, &hostSockaddr, &remoteSockfd, &remoteSockaddr, &ftpsaddr, &trolladdr, argv[1]);
 
-	//allocating space for buffer
+	//allocating space for buffer and minibuffer
 	buffer = malloc(64000);
+	minibuffer = malloc(20 * 1024);
+	bzero(buffer, sizeof(buffer));
+	bzero(minibuffer, sizeof(minibuffer));
 
 	//while loop for deamon like feel
 	for(;;)
