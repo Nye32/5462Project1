@@ -138,17 +138,20 @@ complete the following steps. Note: cM = Client Machine
 	| $ make
 
 2) Run tcpds and tcpdc by executing in multiple terminals/machines
-	| sM$ tcpds
-	| cM$ tcpdc <server-IP> <server-PORT>
+	| sM$ tcpds <client-IP>
+	| cM$ tcpdc <server-IP>
 
 3) Run troll by executing on the client machine
-	| cM$ troll <local-PORT>
+	| cM$ troll -t -x 0 -s 0 <local-PORT>(4000)
+
+4) Run timerprocess by executing on the client maching
+	| cM$ tp
 
 4) Run ftps by executing the following on the server machine
 	| sM$ ftps <server-PORT>
 
 5) Run ftpc by executing the following on the client machine
-	| cM$ ftpc <server-IP> <server-PORT> <local-file-to-transfer>
+	| cM$ ftpc <local-file-to-transfer>
 
 
 ====| Timer Demo |================================================
