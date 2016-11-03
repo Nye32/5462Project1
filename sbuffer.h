@@ -16,7 +16,7 @@ int addData(int byteSeqNum, int size, char *data);
 //int getSize();
 
 // Checks and gets data
-void requestData(char * temp);
+int requestData(int size, char * temp);
 
 // free data
 //void freeBuffer(char *buffer);

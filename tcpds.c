@@ -111,8 +111,6 @@ void hostisset(int * hostSock, struct sockaddr_in * ftpsaddr)
 
 	//checking if request asked for more than we have
 	uint32_t * request_size = temp;
-	if(*request_size>counter)
-		*request_size = counter;
 
 	//setting up to send packet to ftps
 	setSendAddress(*(struct sockaddr *)ftpsaddr);

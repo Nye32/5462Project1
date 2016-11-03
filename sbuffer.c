@@ -284,33 +284,59 @@ int getSize() {
 }
 
 
-// sets *d equal to head data and free's node
-void requestData(char * d)
+// sets *d equal to head data and free's node... returns size
+int requestData(int size, char * d)
 {	struct cirNode * current = head;
+
 	if (current->filled == 1 && current->firstSeq == dstart) {
-		// check wrapround
-		if(current->size + current->data > 64000)
-		{
-			memcpy(d, (buffer + current->data), (64000-(current->data)));
-			memcpy(d + (64000-(current->data)), buffer, current->size - (64000-current->data));
+		// Wants more or equal data of current
+		if (current->size <= size) {
+			int returnSize = current->size;
+			// check wrapround
+			if(current->size + current->data > 64000)
+			{
+				memcpy(d, (buffer + current->data), (64000-(current->data)));
+				memcpy(d + (64000-(current->data)), buffer, current->size - (64000-current->data));
+			}
+			// no wraparound
+			else
+			{
+				memcpy(d, buffer+(current->data), current->size);
+			}
+
+			// set filled to 0;
+			current->filled = 0;
+
+			// reset head and dvalue
+			dstart = current->lastSeq + 1;
+			head = head->next;
+
+			// merge
+			mergeList();
+			return(returnSize);
+
+		// Current has more data then what is being requested
+		} else {
+			// check wrapround
+			if(current->size + current->data > 64000)
+			{
+				memcpy(d, (buffer + current->data), (64000-(current->data)));
+				memcpy(d + (64000-(current->data)), buffer, size - (64000-current->data));
+			}
+			// no wraparound
+			else
+			{
+				memcpy(d, buffer+(current->data), size);
+			}
+
+			// Adjust data and size
+			current->data = current->data + size;
+			current->size = current->size - size;
+
+			return(size);
 		}
-		// no wraparound
-		else
-		{
-			memcpy(d, buffer+(current->data), current->size);
-		}
-
-		// set filled to 0;
-		current->filled = 0;
-
-		// reset head and dvalue
-		dstart = current->lastSeq + 1;
-		head = head->next;
-
-		// merge
-		mergeList();
  	} else {
 		d = NULL;
  	}
- 	return;
+ 	return 0;
 }
