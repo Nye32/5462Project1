@@ -244,7 +244,8 @@ int main(int args, char * argv[])
 		exit(0);
 	}
 	
-//	initialize();
+	// Initialize sbuffer
+	initialize();
 
 
 	//socket and struct sockaddr declaration

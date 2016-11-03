@@ -17,8 +17,8 @@
 
 
 char buffer[64000];
-int dstart = 0;
-int dend = 0;
+int dstart = 1;
+int dend = 1;
 int isempty = 1;
 
 
@@ -75,6 +75,8 @@ void printList() {
 	if (current == NULL) {
 		printf("No List.\n");
 	} else {
+		printf("dstart:\t%d\n", dstart);
+		printf("dend:\t%d\n", dend);
 		while (current->next != head) {
 			printf("_________________\n");
 			printf("Filled:\t\t%d\n", current->filled);
@@ -109,12 +111,24 @@ void mergeList() {
 			current->size = current->size + current->next->size;
 			current->next = current->next->next;
 		}
+		while (current->filled == 0 && current->next->filled == 0
+			&& dstart != current->firstSeq && dstart != current->next->firstSeq) {
+			// Merge
+			printf("Merging %d & %d.\n", current->lastSeq, current->next->firstSeq);
+			current->lastSeq = 2147483647; // Max int value
+			current->size = current->size + current->next->size;
+			current->next = current->next->next;
+		}
+
 		current =  current->next;
 	}
 }
 
 void addData(int seqnum, int size ,char * data)
 {	
+	// Merge List to ensure it is proper
+	mergeList();
+
 	struct cirNode * current = head;
 	while(current != NULL)	{
 		// Check for entry that already exists
@@ -122,6 +136,9 @@ void addData(int seqnum, int size ,char * data)
 			// Already have data!
 			// TODO - Return something
 			perror("DATA already present in list");
+			break;
+		} else if (seqnum > (dstart+63)) {
+			perror("Seqnum out of range!");
 			break;
 		}
 		// current is empty
@@ -172,8 +189,9 @@ void addData(int seqnum, int size ,char * data)
 
 				// Set Sizes (ASSUMING PACKET SIZE OF 1000)
 				nodeA->size = size;
-				nodeB->size = ((nodeB->lastSeq - nodeB->firstSeq + 1) * 1000);
+				int temp = current->size;
 				current->size = ((current->lastSeq - current->firstSeq + 1) * 1000);
+				nodeB->size = temp - (current->size + nodeA->size);
 
 				// set data values
 				// nodeA wraparound
@@ -237,6 +255,11 @@ void addData(int seqnum, int size ,char * data)
 					memcpy(buffer + current->data, data, current->size);
 				}
 
+				// Update dvalues
+				if (seqnum > dend) {
+					dend = seqnum;
+				}
+
 				// Merge
 				mergeList();
 
@@ -248,7 +271,7 @@ void addData(int seqnum, int size ,char * data)
 		// Move Current
 		current = current->next;
 	}
-	printf("Unable to Insert data!");
+	printf("Unable to Insert data!\n");
 }
 // gets size of first node (if it contains data)
 int getSize() {
@@ -263,7 +286,7 @@ int getSize() {
 // sets *d equal to head data and free's node
 void requestData(char * d)
 {	struct cirNode * current = head;
-	if (current->filled == 1) {
+	if (current->filled == 1 && current->firstSeq == dstart) {
 		// check wrapround
 		if(current->size + current->data > 64000)
 		{
@@ -279,14 +302,12 @@ void requestData(char * d)
 		// set filled to 0;
 		current->filled = 0;
 
+		// reset head and dvalue
+		dstart = current->lastSeq + 1;
+		head = head->next;
+
 		// merge
 		mergeList();
-
-		// reset head
-		while (current->filled == 0 && current->next != NULL) {
-			current = current->next;
-		}
-		head = current;
  	} else {
 		d = NULL;
  	}
