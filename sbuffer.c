@@ -124,7 +124,7 @@ void mergeList() {
 	}
 }
 
-void addData(int seqnum, int size ,char * data)
+int addData(int seqnum, int size ,char * data)
 {	
 	// Merge List to ensure it is proper
 	mergeList();
@@ -135,8 +135,8 @@ void addData(int seqnum, int size ,char * data)
 		if (current->firstSeq == seqnum && current->filled == 1) {
 			// Already have data!
 			// TODO - Return something
-			perror("DATA already present in list");
-			break;
+			printf("Duplicate seqnum");
+			return 1;
 		} else if (seqnum > (dstart+63)) {
 			perror("Seqnum out of range!");
 			break;
@@ -264,7 +264,7 @@ void addData(int seqnum, int size ,char * data)
 				mergeList();
 
 				// End
-				return;
+				return 1;
 			}
 		}
 
@@ -272,6 +272,7 @@ void addData(int seqnum, int size ,char * data)
 		current = current->next;
 	}
 	printf("Unable to Insert data!\n");
+	return 0;
 }
 // gets size of first node (if it contains data)
 int getSize() {
